@@ -1,0 +1,5 @@
+/.aftman/
+/Packages/
+*.rbxlx
+*.rbxl
+sourcemap.json
