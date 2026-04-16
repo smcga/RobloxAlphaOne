@@ -1,0 +1,36 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0.4.2
+
+      - name: Install toolchain
+        run: aftman install
+
+      - name: Install dependencies
+        run: wally install
+
+      - name: Build place file
+        run: rojo build default.project.json --output build.rbxlx
+
+      - name: Upload place (placeholder)
+        env:
+          ROBLOX_UNIVERSE_ID: ${{ secrets.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ secrets.ROBLOX_PLACE_ID }}
+          ROBLOX_OPEN_CLOUD_API_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
+        run: |
+          echo "Manual scaffold only."
+          echo "Provide a trusted upload step/tool with your own Open Cloud credentials and place IDs."
+          test -n "$ROBLOX_UNIVERSE_ID"
+          test -n "$ROBLOX_PLACE_ID"
+          test -n "$ROBLOX_OPEN_CLOUD_API_KEY"
