@@ -2,7 +2,9 @@ local ScoreLogic = require('../src/Shared/ScoreLogic.luau')
 
 local function expectEqual(actual: number, expected: number, message: string)
     if actual ~= expected then
-        error(string.format('%s (expected %s, got %s)', message, tostring(expected), tostring(actual)))
+        error(
+            string.format('%s (expected %s, got %s)', message, tostring(expected), tostring(actual))
+        )
     end
 end
 

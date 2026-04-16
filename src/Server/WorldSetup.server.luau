@@ -35,7 +35,8 @@ local function ensureScoreZone(): BasePart
     zone.CanCollide = false
     zone.CanTouch = false
     zone.CanQuery = true
-    zone.Size = Vector3.new(Constants.ZONE_HEIGHT, Constants.ZONE_RADIUS * 2, Constants.ZONE_RADIUS * 2)
+    zone.Size =
+        Vector3.new(Constants.ZONE_HEIGHT, Constants.ZONE_RADIUS * 2, Constants.ZONE_RADIUS * 2)
     zone.CFrame = CFrame.new(Constants.ZONE_CENTER) * CFrame.Angles(0, 0, math.rad(90))
     zone.Material = Enum.Material.Neon
     zone.Transparency = 0.35

@@ -12,7 +12,13 @@ function ScoreLogic.newState(initialScore: number?): TickState
     }
 end
 
-function ScoreLogic.tick(state: TickState, deltaSeconds: number, isInsideZone: boolean, intervalSeconds: number, increment: number): TickState
+function ScoreLogic.tick(
+    state: TickState,
+    deltaSeconds: number,
+    isInsideZone: boolean,
+    intervalSeconds: number,
+    increment: number
+): TickState
     if not isInsideZone then
         return {
             score = state.score,
