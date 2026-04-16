@@ -6,6 +6,7 @@ local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ScoreLogic = require(Shared:WaitForChild('ScoreLogic'))
+local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
 
 type TickState = typeof(ScoreLogic.newState())
 
@@ -30,19 +31,6 @@ local function getHumanoidRootPart(player: Player): BasePart?
     return nil
 end
 
-local function isPositionInsideZone(
-    position: Vector3,
-    zoneCenter: Vector3,
-    zoneRadius: number,
-    zoneHeight: number
-): boolean
-    local flatOffset = Vector2.new(position.X - zoneCenter.X, position.Z - zoneCenter.Z)
-    local inRadius = flatOffset.Magnitude <= zoneRadius
-    local halfHeight = zoneHeight * 0.5
-    local inHeight = math.abs(position.Y - zoneCenter.Y) <= halfHeight
-    return inRadius and inHeight
-end
-
 local function pushScore(player: Player, score: number)
     scoreUpdatedEvent:FireClient(player, score)
 end
@@ -63,6 +51,14 @@ Players.PlayerAdded:Connect(function(player)
     end)
 end)
 
+for _, player in Players:GetPlayers() do
+    resetPlayerState(player)
+
+    player.CharacterAdded:Connect(function()
+        resetPlayerState(player)
+    end)
+end
+
 Players.PlayerRemoving:Connect(function(player)
     playerStates[player] = nil
 end)
@@ -73,11 +69,10 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
         local isInside = false
 
         if rootPart then
-            isInside = isPositionInsideZone(
+            isInside = ZoneLogic.isPositionInsideCircle(
                 rootPart.Position,
                 Constants.ZONE_CENTER,
-                Constants.ZONE_RADIUS,
-                Constants.ZONE_HEIGHT
+                Constants.ZONE_RADIUS
             )
         end
 
