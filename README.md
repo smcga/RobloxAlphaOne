@@ -6,7 +6,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Spawns players into a minimal world with a baseplate.
 - Creates a visible glowing circular scoring zone.
 - Shows `Score: 0` UI on join/spawn.
-- Increments score by exactly `+1` per second while inside the zone.
+- Increments score by exactly `+1` per second while inside the zone (based on horizontal position in the circle).
 - Stops score gain immediately when leaving the zone.
 - Keeps score server-authoritative and session-only (no DataStore).
 
