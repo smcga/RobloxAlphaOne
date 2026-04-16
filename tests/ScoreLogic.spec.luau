@@ -1,4 +1,4 @@
-local ScoreLogic = require('../src/Shared/ScoreLogic.luau')
+local ScoreLogic = require('../src/Shared/ScoreLogic')
 
 local function expectEqual(actual: number, expected: number, message: string)
     if actual ~= expected then
