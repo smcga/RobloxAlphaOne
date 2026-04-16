@@ -11,17 +11,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Aftman
-        uses: ok-nick/setup-aftman@v0.4.2
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+
+      - name: Trust mise config
+        run: mise trust
 
       - name: Install toolchain
-        run: aftman install
+        run: mise install
 
       - name: Install dependencies
-        run: wally install
+        run: mise exec -- wally install
 
       - name: Build place file
-        run: rojo build default.project.json --output build.rbxlx
+        run: mise exec -- rojo build default.project.json --output build.rbxlx
 
       - name: Upload place (placeholder)
         env:
