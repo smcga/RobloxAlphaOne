@@ -6,6 +6,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Spawns players into a minimal world with a baseplate.
 - Creates visible glowing circular scoring zones (blue + red).
 - Shows `Score: 0` UI on join/spawn.
+- Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
 - Shows `Rebirths: 0` UI under score on join/spawn.
 - Increments score by exactly `+1` per second while inside the blue zone (based on horizontal position in the circle).
 - Applies a rebirth multiplier to score gain (`max(Rebirths, 1)`), so `2` rebirths means `2x` score/sec.

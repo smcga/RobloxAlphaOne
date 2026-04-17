@@ -6,6 +6,7 @@ local playerGui = player:WaitForChild('PlayerGui')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Remotes = require(Shared:WaitForChild('Remotes'))
+local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
 
 local screenGui = Instance.new('ScreenGui')
 screenGui.Name = 'ScoreGui'
@@ -36,8 +37,8 @@ rebirthsLabel.Text = 'Rebirths: 0'
 rebirthsLabel.Parent = screenGui
 
 local function setScoreAndRebirths(score: number, rebirths: number)
-    scoreLabel.Text = string.format('Score: %d', score)
-    rebirthsLabel.Text = string.format('Rebirths: %d', rebirths)
+    scoreLabel.Text = string.format('Score: %s', NumberFormat.formatCompact(score))
+    rebirthsLabel.Text = string.format('Rebirths: %s', NumberFormat.formatCompact(rebirths))
 end
 
 local scoreUpdatedEvent = Remotes.waitForScoreUpdatedEvent()
