@@ -29,11 +29,18 @@ local corner = Instance.new('UICorner')
 corner.CornerRadius = UDim.new(0, 8)
 corner.Parent = scoreLabel
 
-local function setScore(score: number)
+local rebirthsLabel = scoreLabel:Clone()
+rebirthsLabel.Name = 'RebirthsLabel'
+rebirthsLabel.Position = UDim2.fromOffset(16, 72)
+rebirthsLabel.Text = 'Rebirths: 0'
+rebirthsLabel.Parent = screenGui
+
+local function setScoreAndRebirths(score: number, rebirths: number)
     scoreLabel.Text = string.format('Score: %d', score)
+    rebirthsLabel.Text = string.format('Rebirths: %d', rebirths)
 end
 
 local scoreUpdatedEvent = Remotes.waitForScoreUpdatedEvent()
-scoreUpdatedEvent.OnClientEvent:Connect(function(score: number)
-    setScore(score)
+scoreUpdatedEvent.OnClientEvent:Connect(function(score: number, rebirths: number)
+    setScoreAndRebirths(score, rebirths)
 end)

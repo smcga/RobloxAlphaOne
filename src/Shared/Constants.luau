@@ -3,6 +3,7 @@ local Constants = {
     BLUE_SCORE_INCREMENT = 1,
     RED_SCORE_INCREMENT = 50,
     RED_ZONE_REQUIRED_SCORE = 100,
+    REBIRTH_SCORE_DIVISOR = 10,
 
     BLUE_ZONE_NAME = 'ScoreZone',
     BLUE_ZONE_CENTER = Vector3.new(0, 1, 0),
@@ -13,6 +14,11 @@ local Constants = {
     RED_ZONE_CENTER = Vector3.new(35, 1, 0),
     RED_ZONE_RADIUS = 10,
     RED_ZONE_HEIGHT = 4,
+
+    REBIRTH_ZONE_NAME = 'RebirthZone',
+    REBIRTH_ZONE_CENTER = Vector3.new(-35, 1, 0),
+    REBIRTH_ZONE_RADIUS = 10,
+    REBIRTH_ZONE_HEIGHT = 4,
 
     RED_ZONE_LAUNCH_SPEED = 140,
     RED_ZONE_LAUNCH_UPWARD_SPEED = 65,
