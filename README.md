@@ -4,17 +4,19 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 
 ## What this project does
 - Spawns players into a minimal world with a baseplate.
-- Creates a visible glowing circular scoring zone.
+- Creates visible glowing circular scoring zones (blue + red).
 - Shows `Score: 0` UI on join/spawn.
-- Increments score by exactly `+1` per second while inside the zone (based on horizontal position in the circle).
-- Stops score gain immediately when leaving the zone.
+- Increments score by exactly `+1` per second while inside the blue zone (based on horizontal position in the circle).
+- Unlocks a red high-score zone at `100` points that grants `+50` per second while inside it.
+- Entering the red zone before `100` score launches the player away and then kills them.
+- Stops score gain immediately when leaving each zone.
 - Keeps score server-authoritative and session-only (no DataStore).
 
 ## Project structure
 - `src/Shared` shared modules/constants/pure logic/remotes.
 - `src/Server` server-only world setup and scoring service.
 - `src/Client` UI binding.
-- `tests` deterministic unit tests for pure score logic.
+- `tests` deterministic unit tests for pure scoring and zone progression logic.
 
 ## Prerequisites
 - [mise-en-place (mise)](https://mise.jdx.dev/)
@@ -82,10 +84,12 @@ Keep this terminal running while you work.
 3. Connect the plugin to the running Rojo server from Step 5.
 4. Start Play mode.
 5. Verify expected MVP behavior:
-   - A `Baseplate` and glowing circular `ScoreZone` appear in `Workspace`.
+   - A `Baseplate`, blue `ScoreZone`, and red `HighScoreZone` appear in `Workspace`.
    - You see `Score: 0` in the UI.
-   - Standing inside the zone adds exactly `+1` score per second.
-   - Leaving the zone stops score gain immediately.
+   - Standing inside the blue zone adds exactly `+1` score per second.
+   - At `100+` score, standing in the red zone adds exactly `+50` score per second.
+   - Entering the red zone below `100` score launches and kills the player.
+   - Leaving zones stops score gain immediately.
 
 ### 7) Daily workflow (recommended)
 For normal development sessions:
@@ -120,7 +124,7 @@ mise exec -- rojo serve default.project.json
 ```
 
 ## Tooling choices
-- **Tests:** Uses a lightweight deterministic `lune`-run unit test script for pure logic (`src/Shared/ScoreLogic.luau`). This avoids brittle engine simulation while still providing CI coverage for the scoring rules.
+- **Tests:** Uses a lightweight deterministic `lune`-run unit test script for pure logic (`src/Shared/ScoreLogic.luau`, `src/Shared/ZoneProgressionLogic.luau`). This avoids brittle engine simulation while still providing CI coverage for scoring rules.
 - **Validation:** Luau type annotations are used in source modules. Selene provides practical static linting. Full engine-level typecheck in CI is intentionally not over-engineered here.
 
 ## CI
