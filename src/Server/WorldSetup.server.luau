@@ -60,8 +60,33 @@ local function ensureZone(
     return zone
 end
 
+local function ensureZoneLabel(zone: BasePart, text: string)
+    local existing = zone:FindFirstChild('ZoneBillboard')
+    if existing and existing:IsA('BillboardGui') then
+        return
+    end
+
+    local billboardGui = Instance.new('BillboardGui')
+    billboardGui.Name = 'ZoneBillboard'
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Size = UDim2.fromOffset(220, 64)
+    billboardGui.StudsOffset = Vector3.new(0, 6, 0)
+    billboardGui.Parent = zone
+
+    local label = Instance.new('TextLabel')
+    label.Name = 'ZoneLabel'
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBlack
+    label.TextScaled = true
+    label.TextStrokeTransparency = 0.2
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.Text = text
+    label.Parent = billboardGui
+end
+
 ensureBaseplate()
-ensureZone(
+local scoreZone = ensureZone(
     Constants.BLUE_ZONE_NAME,
     Constants.BLUE_ZONE_CENTER,
     Constants.BLUE_ZONE_RADIUS,
@@ -69,7 +94,7 @@ ensureZone(
     Color3.fromRGB(0, 170, 255),
     Color3.fromRGB(167, 230, 255)
 )
-ensureZone(
+local highScoreZone = ensureZone(
     Constants.RED_ZONE_NAME,
     Constants.RED_ZONE_CENTER,
     Constants.RED_ZONE_RADIUS,
@@ -77,3 +102,15 @@ ensureZone(
     Color3.fromRGB(255, 60, 60),
     Color3.fromRGB(255, 170, 170)
 )
+local rebirthZone = ensureZone(
+    Constants.REBIRTH_ZONE_NAME,
+    Constants.REBIRTH_ZONE_CENTER,
+    Constants.REBIRTH_ZONE_RADIUS,
+    Constants.REBIRTH_ZONE_HEIGHT,
+    Color3.fromRGB(255, 0, 255),
+    Color3.fromRGB(255, 214, 255)
+)
+
+ensureZoneLabel(scoreZone, 'Score')
+ensureZoneLabel(highScoreZone, 'High Score')
+ensureZoneLabel(rebirthZone, 'Rebirth')

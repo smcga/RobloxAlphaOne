@@ -45,8 +45,8 @@ local function getHumanoid(player: Player): Humanoid?
     return nil
 end
 
-local function pushScore(player: Player, score: number)
-    scoreUpdatedEvent:FireClient(player, score)
+local function pushScore(player: Player, score: number, rebirths: number)
+    scoreUpdatedEvent:FireClient(player, score, rebirths)
 end
 
 local function resetPlayerState(player: Player)
@@ -54,7 +54,7 @@ local function resetPlayerState(player: Player)
         progressionState = ZoneProgressionLogic.newState(0),
     }
 
-    pushScore(player, 0)
+    pushScore(player, 0, 0)
 end
 
 local function punishForRedZone(player: Player, rootPart: BasePart)
@@ -105,6 +105,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
         local rootPart = getHumanoidRootPart(player)
         local isInsideBlueZone = false
         local isInsideRedZone = false
+        local isInsideRebirthZone = false
 
         if rootPart then
             isInsideBlueZone = ZoneLogic.isPositionInsideCircle(
@@ -117,6 +118,11 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
                 Constants.RED_ZONE_CENTER,
                 Constants.RED_ZONE_RADIUS
             )
+            isInsideRebirthZone = ZoneLogic.isPositionInsideCircle(
+                rootPart.Position,
+                Constants.REBIRTH_ZONE_CENTER,
+                Constants.REBIRTH_ZONE_RADIUS
+            )
         end
 
         local tickResult = ZoneProgressionLogic.tick(state.progressionState, {
@@ -127,14 +133,19 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             blueIncrement = Constants.BLUE_SCORE_INCREMENT,
             redIncrement = Constants.RED_SCORE_INCREMENT,
             redRequiredScore = Constants.RED_ZONE_REQUIRED_SCORE,
+            isInsideRebirthZone = isInsideRebirthZone,
+            rebirthScoreDivisor = Constants.REBIRTH_SCORE_DIVISOR,
         })
 
         if tickResult.shouldPunishForRedZone and rootPart then
             punishForRedZone(player, rootPart)
         end
 
-        if tickResult.state.score ~= state.progressionState.score then
-            pushScore(player, tickResult.state.score)
+        if
+            tickResult.state.score ~= state.progressionState.score
+            or tickResult.state.rebirths ~= state.progressionState.rebirths
+        then
+            pushScore(player, tickResult.state.score, tickResult.state.rebirths)
         end
 
         state.progressionState = tickResult.state
