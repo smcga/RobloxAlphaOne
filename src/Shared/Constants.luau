@@ -1,10 +1,22 @@
 local Constants = {
     SCORE_INTERVAL_SECONDS = 1,
-    SCORE_INCREMENT = 1,
-    ZONE_NAME = 'ScoreZone',
-    ZONE_CENTER = Vector3.new(0, 1, 0),
-    ZONE_RADIUS = 14,
-    ZONE_HEIGHT = 4,
+    BLUE_SCORE_INCREMENT = 1,
+    RED_SCORE_INCREMENT = 50,
+    RED_ZONE_REQUIRED_SCORE = 100,
+
+    BLUE_ZONE_NAME = 'ScoreZone',
+    BLUE_ZONE_CENTER = Vector3.new(0, 1, 0),
+    BLUE_ZONE_RADIUS = 14,
+    BLUE_ZONE_HEIGHT = 4,
+
+    RED_ZONE_NAME = 'HighScoreZone',
+    RED_ZONE_CENTER = Vector3.new(35, 1, 0),
+    RED_ZONE_RADIUS = 10,
+    RED_ZONE_HEIGHT = 4,
+
+    RED_ZONE_LAUNCH_SPEED = 140,
+    RED_ZONE_LAUNCH_UPWARD_SPEED = 65,
+
     BASEPLATE_SIZE = Vector3.new(128, 1, 128),
 }
 
