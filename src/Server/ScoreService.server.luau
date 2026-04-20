@@ -240,6 +240,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
         local rootPart = getHumanoidRootPart(player)
         local isInsideBlueZone = false
         local isInsideRedZone = false
+        local isInsideEighteenHundredsZone = false
         local isInsideRebirthZone = false
 
         if rootPart then
@@ -258,6 +259,11 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
                 Constants.REBIRTH_ZONE_CENTER,
                 Constants.REBIRTH_ZONE_RADIUS
             )
+            isInsideEighteenHundredsZone = ZoneLogic.isPositionInsideCircle(
+                rootPart.Position,
+                Constants.EIGHTEEN_HUNDREDS_ZONE_CENTER,
+                Constants.EIGHTEEN_HUNDREDS_ZONE_RADIUS
+            )
         end
 
         local tickResult = ZoneProgressionLogic.tick(state.progressionState, {
@@ -268,6 +274,9 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             blueIncrement = Constants.BLUE_SCORE_INCREMENT,
             redIncrement = Constants.RED_SCORE_INCREMENT,
             redRequiredScore = Constants.RED_ZONE_REQUIRED_SCORE,
+            isInsideEighteenHundredsZone = isInsideEighteenHundredsZone,
+            eighteenHundredsIncrement = Constants.EIGHTEEN_HUNDREDS_SCORE_INCREMENT,
+            eighteenHundredsRequiredScore = Constants.EIGHTEEN_HUNDREDS_ZONE_REQUIRED_SCORE,
             isInsideRebirthZone = isInsideRebirthZone,
             rebirthScoreDivisor = Constants.REBIRTH_SCORE_DIVISOR,
         })

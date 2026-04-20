@@ -12,6 +12,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Increments score by exactly `+1` per second while inside the blue zone (based on horizontal position in the circle).
 - Applies a rebirth multiplier to score gain (`max(Rebirths, 1)`), so `2` rebirths means `2x` score/sec.
 - Unlocks a red high-score zone at `100` points that grants `+50` per second while inside it.
+- Unlocks a `1700's` zone at `50,000,000` points that grants `+500` per second while inside it.
 - Entering the red zone before `100` score launches the player away and then kills them.
 - Entering the glowing `Rebirth` zone converts score into rebirths (`+1` per `1000` score) and resets score to `0`.
 - Stops score gain immediately when leaving each zone.
@@ -90,11 +91,12 @@ Keep this terminal running while you work.
 3. Connect the plugin to the running Rojo server from Step 5.
 4. Start Play mode.
 5. Verify expected MVP behavior:
-   - A `Baseplate`, blue `ScoreZone`, red `HighScoreZone`, and magenta `RebirthZone` appear in `Workspace`.
+   - A `Baseplate`, blue `ScoreZone`, red `HighScoreZone`, orange `1700'sZone`, and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
    - Standing inside the blue zone adds exactly `+1` score per second.
    - Score gain scales with rebirths (example: `2` rebirths => `+2`/sec in blue zone).
    - At `100+` score, standing in the red zone adds exactly `+50` score per second.
+   - At `50,000,000+` score, standing in the `1700's` zone adds exactly `+500` score per second.
    - Entering the red zone below `100` score launches and kills the player.
    - Entering the `Rebirth` zone resets score to `0` and grants `floor(score / 1000)` rebirths.
    - If you're the game owner, admin panel buttons can multiply your current score by `2x` or `10x`.

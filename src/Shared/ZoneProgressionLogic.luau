@@ -5,6 +5,7 @@ export type ZoneProgressionState = {
     rebirths: number,
     blueAccumulatorSeconds: number,
     redAccumulatorSeconds: number,
+    eighteenHundredsAccumulatorSeconds: number,
     wasInsideRebirthZone: boolean,
 }
 
@@ -16,6 +17,9 @@ export type ZoneProgressionInput = {
     blueIncrement: number,
     redIncrement: number,
     redRequiredScore: number,
+    isInsideEighteenHundredsZone: boolean,
+    eighteenHundredsIncrement: number,
+    eighteenHundredsRequiredScore: number,
     isInsideRebirthZone: boolean,
     rebirthScoreDivisor: number,
 }
@@ -36,6 +40,7 @@ function ZoneProgressionLogic.newState(
         rebirths = initialRebirths or 0,
         blueAccumulatorSeconds = 0,
         redAccumulatorSeconds = 0,
+        eighteenHundredsAccumulatorSeconds = 0,
         wasInsideRebirthZone = false,
     }
 end
@@ -70,17 +75,31 @@ function ZoneProgressionLogic.tick(
         input.redIncrement * scoreMultiplier
     )
 
+    local canUseEighteenHundredsZone = redTickState.score >= input.eighteenHundredsRequiredScore
+    local eighteenHundredsTickState = ScoreLogic.tick(
+        {
+            score = redTickState.score,
+            accumulatorSeconds = state.eighteenHundredsAccumulatorSeconds,
+        },
+        input.deltaSeconds,
+        input.isInsideEighteenHundredsZone and canUseEighteenHundredsZone,
+        input.scoreIntervalSeconds,
+        input.eighteenHundredsIncrement * scoreMultiplier
+    )
+
     local enteredRebirthZone = input.isInsideRebirthZone and not state.wasInsideRebirthZone
     local rebirths = state.rebirths
-    local score = redTickState.score
+    local score = eighteenHundredsTickState.score
     local blueAccumulatorSeconds = blueTickState.accumulatorSeconds
     local redAccumulatorSeconds = redTickState.accumulatorSeconds
+    local eighteenHundredsAccumulatorSeconds = eighteenHundredsTickState.accumulatorSeconds
 
     if enteredRebirthZone then
         rebirths += math.floor(score / input.rebirthScoreDivisor)
         score = 0
         blueAccumulatorSeconds = 0
         redAccumulatorSeconds = 0
+        eighteenHundredsAccumulatorSeconds = 0
     end
 
     return {
@@ -89,6 +108,7 @@ function ZoneProgressionLogic.tick(
             rebirths = rebirths,
             blueAccumulatorSeconds = blueAccumulatorSeconds,
             redAccumulatorSeconds = redAccumulatorSeconds,
+            eighteenHundredsAccumulatorSeconds = eighteenHundredsAccumulatorSeconds,
             wasInsideRebirthZone = input.isInsideRebirthZone,
         },
         shouldPunishForRedZone = shouldPunishForRedZone,

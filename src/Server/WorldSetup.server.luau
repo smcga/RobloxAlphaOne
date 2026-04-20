@@ -110,7 +110,16 @@ local rebirthZone = ensureZone(
     Color3.fromRGB(255, 0, 255),
     Color3.fromRGB(255, 214, 255)
 )
+local eighteenHundredsZone = ensureZone(
+    Constants.EIGHTEEN_HUNDREDS_ZONE_NAME,
+    Constants.EIGHTEEN_HUNDREDS_ZONE_CENTER,
+    Constants.EIGHTEEN_HUNDREDS_ZONE_RADIUS,
+    Constants.EIGHTEEN_HUNDREDS_ZONE_HEIGHT,
+    Color3.fromRGB(255, 170, 0),
+    Color3.fromRGB(255, 234, 181)
+)
 
 ensureZoneLabel(scoreZone, 'Score')
 ensureZoneLabel(highScoreZone, 'High Score')
 ensureZoneLabel(rebirthZone, 'Rebirth')
+ensureZoneLabel(eighteenHundredsZone, "1700's")
