@@ -3,7 +3,7 @@
 A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-place).
 
 ## What this project does
-- Spawns players into a stylized starter world with a baseplate, hills, paths, and Creator Store tree assets ("Realistic Trees", asset `3256343670`) plus deterministic path/hill/rock props built from decor specs.
+- Spawns players into a stylized starter world with a baseplate, hills, paths, Creator Store tree assets ("Realistic Trees", asset `3256343670`), and flower bush assets ("Realistic bush flowers mesh", asset `9187138703`) plus deterministic path/hill/rock props built from decor specs.
 - Creates visible glowing circular scoring zones (blue + red).
 - Shows `Score: 0` UI on join/spawn.
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).

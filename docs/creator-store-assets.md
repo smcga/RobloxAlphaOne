@@ -7,6 +7,7 @@ This file is the source of truth for Roblox Creator Store assets currently refer
 | Asset Name | Asset ID | Where Used |
 | --- | --- | --- |
 | Realistic Trees | `3256343670` | `src/Shared/WorldDecorLogic.luau` (`RealisticTreeNorth`, `RealisticTreeNorthEast`, `RealisticTreeSouth`, `RealisticTreeWest`) |
+| Realistic bush flowers mesh | `9187138703` | `src/Shared/WorldDecorLogic.luau` (`FlowerBushCenterNorth`, `FlowerBushCenterSouth`, `FlowerBushEastHill`, `FlowerBushWestHill`) |
 
 ## Maintenance rule
 
