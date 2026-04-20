@@ -14,7 +14,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Entering the red zone before `100` score launches the player away and then kills them.
 - Entering the glowing `Rebirth` zone converts score into rebirths (`+1` per `10` score) and resets score to `0`.
 - Stops score gain immediately when leaving each zone.
-- Keeps score server-authoritative and session-only (no DataStore).
+- Keeps score server-authoritative and persistent across death/rejoin with Roblox DataStore.
 
 ## Project structure
 - `src/Shared` shared modules/constants/pure logic/remotes.
@@ -25,6 +25,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 ## Prerequisites
 - [mise-en-place (mise)](https://mise.jdx.dev/)
 - Roblox Studio
+- For Studio persistence testing: enable **Game Settings -> Security -> Enable Studio Access to API Services**.
 
 ## Getting started (beginner step-by-step)
 
