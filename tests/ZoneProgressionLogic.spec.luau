@@ -31,7 +31,7 @@ local function tick(state, overrides)
         blueIncrement = 1,
         redIncrement = 50,
         redRequiredScore = 100,
-        rebirthScoreDivisor = 10,
+        rebirthScoreDivisor = 1000,
     }
 
     for key, value in pairs(overrides) do
@@ -64,16 +64,16 @@ runCase('rebirth count multiplies score gain per tick', function()
 end)
 
 runCase('entering rebirth zone resets score and awards rebirths', function()
-    local result = tick(ZoneProgressionLogic.newState(25, 3), {
+    local result = tick(ZoneProgressionLogic.newState(2100, 3), {
         isInsideRebirthZone = true,
     })
 
     expectEqual(result.state.score, 0, 'rebirth should reset score to zero')
-    expectEqual(result.state.rebirths, 5, 'rebirth should award floor(score / 10)')
+    expectEqual(result.state.rebirths, 5, 'rebirth should award floor(score / 1000)')
 end)
 
 runCase('staying in rebirth zone does not repeatedly grant rebirths', function()
-    local state = ZoneProgressionLogic.newState(25, 3)
+    local state = ZoneProgressionLogic.newState(2100, 3)
     local first = tick(state, {
         isInsideRebirthZone = true,
     })

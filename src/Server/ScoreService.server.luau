@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService('ReplicatedStorage')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
+local AdminLogic = require(Shared:WaitForChild('AdminLogic'))
 local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
@@ -20,6 +21,8 @@ type PlayerScoreState = {
 }
 
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
+local adminScoreMultiplyRequestEvent = Remotes.getOrCreateAdminScoreMultiplyRequestEvent()
+local adminStateUpdatedEvent = Remotes.getOrCreateAdminStateUpdatedEvent()
 local playerStates: { [Player]: PlayerScoreState } = {}
 local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
 
@@ -57,6 +60,14 @@ end
 
 local function pushScore(player: Player, score: number, rebirths: number)
     scoreUpdatedEvent:FireClient(player, score, rebirths)
+end
+
+local function pushIsAdmin(player: Player, isAdmin: boolean)
+    adminStateUpdatedEvent:FireClient(player, isAdmin)
+end
+
+local function isPlayerAdmin(player: Player): boolean
+    return game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId
 end
 
 local function createPlayerState(score: number, rebirths: number): PlayerScoreState
@@ -140,6 +151,7 @@ local function initializePlayerState(player: Player)
     playerStates[player] = state
 
     pushScore(player, state.progressionState.score, state.progressionState.rebirths)
+    pushIsAdmin(player, isPlayerAdmin(player))
 
     player.CharacterAdded:Connect(function()
         local currentState = playerStates[player]
@@ -152,6 +164,32 @@ local function initializePlayerState(player: Player)
         end
     end)
 end
+
+adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, multiplier: number)
+    if typeof(multiplier) ~= 'number' then
+        return
+    end
+
+    if not isPlayerAdmin(player) then
+        return
+    end
+
+    if not AdminLogic.isAllowedScoreMultiplier(Constants.ADMIN_SCORE_MULTIPLIERS, multiplier) then
+        return
+    end
+
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    local progressionState = state.progressionState
+    progressionState.score = AdminLogic.applyScoreMultiplier(progressionState.score, multiplier)
+
+    pushScore(player, progressionState.score, progressionState.rebirths)
+    markDirty(state)
+    savePlayerState(player, false)
+end)
 
 local function punishForRedZone(player: Player, rootPart: BasePart)
     local direction = rootPart.Position - Constants.RED_ZONE_CENTER
