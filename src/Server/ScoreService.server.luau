@@ -44,20 +44,6 @@ local function getHumanoidRootPart(player: Player): BasePart?
     return nil
 end
 
-local function getHumanoid(player: Player): Humanoid?
-    local character = player.Character
-    if not character then
-        return nil
-    end
-
-    local humanoid = character:FindFirstChildOfClass('Humanoid')
-    if humanoid then
-        return humanoid
-    end
-
-    return nil
-end
-
 local function pushScore(player: Player, score: number, rebirths: number)
     scoreUpdatedEvent:FireClient(player, score, rebirths)
 end
@@ -191,29 +177,6 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
     savePlayerState(player, false)
 end)
 
-local function punishForRedZone(player: Player, rootPart: BasePart)
-    local direction = rootPart.Position - Constants.RED_ZONE_CENTER
-    local flatDirection = Vector3.new(direction.X, 0, direction.Z)
-
-    if flatDirection.Magnitude < 0.001 then
-        flatDirection = Vector3.new(1, 0, 0)
-    else
-        flatDirection = flatDirection.Unit
-    end
-
-    rootPart.AssemblyLinearVelocity = (flatDirection * Constants.RED_ZONE_LAUNCH_SPEED)
-        + Vector3.new(0, Constants.RED_ZONE_LAUNCH_UPWARD_SPEED, 0)
-
-    local humanoid = getHumanoid(player)
-    if humanoid and humanoid.Health > 0 then
-        task.delay(0.15, function()
-            if humanoid.Parent and humanoid.Health > 0 then
-                humanoid.Health = 0
-            end
-        end)
-    end
-end
-
 Players.PlayerAdded:Connect(function(player)
     initializePlayerState(player)
 end)
@@ -238,52 +201,40 @@ end)
 RunService.Heartbeat:Connect(function(deltaSeconds: number)
     for player, state in pairs(playerStates) do
         local rootPart = getHumanoidRootPart(player)
-        local isInsideBlueZone = false
-        local isInsideRedZone = false
-        local isInsideEighteenHundredsZone = false
+        local isInsideAgeZones = {}
         local isInsideRebirthZone = false
 
         if rootPart then
-            isInsideBlueZone = ZoneLogic.isPositionInsideCircle(
-                rootPart.Position,
-                Constants.BLUE_ZONE_CENTER,
-                Constants.BLUE_ZONE_RADIUS
-            )
-            isInsideRedZone = ZoneLogic.isPositionInsideCircle(
-                rootPart.Position,
-                Constants.RED_ZONE_CENTER,
-                Constants.RED_ZONE_RADIUS
-            )
+            for index, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
+                isInsideAgeZones[index] = ZoneLogic.isPositionInsideCircle(
+                    rootPart.Position,
+                    zoneConfig.center,
+                    zoneConfig.radius
+                )
+            end
             isInsideRebirthZone = ZoneLogic.isPositionInsideCircle(
                 rootPart.Position,
                 Constants.REBIRTH_ZONE_CENTER,
                 Constants.REBIRTH_ZONE_RADIUS
             )
-            isInsideEighteenHundredsZone = ZoneLogic.isPositionInsideCircle(
-                rootPart.Position,
-                Constants.EIGHTEEN_HUNDREDS_ZONE_CENTER,
-                Constants.EIGHTEEN_HUNDREDS_ZONE_RADIUS
-            )
+        end
+
+        local ageZoneProgressionConfigs = {}
+        for index, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
+            ageZoneProgressionConfigs[index] = {
+                requiredScore = zoneConfig.requiredScore,
+                scoreIncrement = zoneConfig.scoreIncrement,
+            }
         end
 
         local tickResult = ZoneProgressionLogic.tick(state.progressionState, {
             deltaSeconds = deltaSeconds,
-            isInsideBlueZone = isInsideBlueZone,
-            isInsideRedZone = isInsideRedZone,
+            isInsideAgeZones = isInsideAgeZones,
+            ageZoneConfigs = ageZoneProgressionConfigs,
             scoreIntervalSeconds = Constants.SCORE_INTERVAL_SECONDS,
-            blueIncrement = Constants.BLUE_SCORE_INCREMENT,
-            redIncrement = Constants.RED_SCORE_INCREMENT,
-            redRequiredScore = Constants.RED_ZONE_REQUIRED_SCORE,
-            isInsideEighteenHundredsZone = isInsideEighteenHundredsZone,
-            eighteenHundredsIncrement = Constants.EIGHTEEN_HUNDREDS_SCORE_INCREMENT,
-            eighteenHundredsRequiredScore = Constants.EIGHTEEN_HUNDREDS_ZONE_REQUIRED_SCORE,
             isInsideRebirthZone = isInsideRebirthZone,
             rebirthScoreDivisor = Constants.REBIRTH_SCORE_DIVISOR,
         })
-
-        if tickResult.shouldPunishForRedZone and rootPart then
-            punishForRedZone(player, rootPart)
-        end
 
         if
             tickResult.state.score ~= state.progressionState.score

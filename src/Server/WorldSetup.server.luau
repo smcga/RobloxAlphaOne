@@ -198,12 +198,19 @@ local function ensureZone(
     outlineColor: Color3
 ): BasePart
     local existing = Workspace:FindFirstChild(zoneName)
+    local zone: BasePart
     if existing and existing:IsA('BasePart') then
-        return existing
+        zone = existing
+    else
+        if existing then
+            existing:Destroy()
+        end
+
+        zone = Instance.new('Part')
+        zone.Name = zoneName
+        zone.Parent = Workspace
     end
 
-    local zone = Instance.new('Part')
-    zone.Name = zoneName
     zone.Shape = Enum.PartType.Cylinder
     zone.Anchored = true
     zone.CanCollide = false
@@ -216,32 +223,56 @@ local function ensureZone(
     zone.Color = zoneColor
     zone.Parent = Workspace
 
-    local highlight = Instance.new('Highlight')
-    highlight.Name = 'ZoneHighlight'
+    local highlight: Highlight
+    local existingHighlight = zone:FindFirstChild('ZoneHighlight')
+    if existingHighlight and existingHighlight:IsA('Highlight') then
+        highlight = existingHighlight
+    else
+        highlight = Instance.new('Highlight')
+        highlight.Name = 'ZoneHighlight'
+        highlight.Parent = zone
+    end
     highlight.FillTransparency = 0.75
     highlight.OutlineColor = outlineColor
     highlight.OutlineTransparency = 0
     highlight.Adornee = zone
-    highlight.Parent = zone
 
     return zone
 end
 
 local function ensureZoneLabel(zone: BasePart, text: string)
     local existing = zone:FindFirstChild('ZoneBillboard')
+    local billboardGui: BillboardGui
     if existing and existing:IsA('BillboardGui') then
-        return
+        billboardGui = existing
+    else
+        if existing then
+            existing:Destroy()
+        end
+
+        billboardGui = Instance.new('BillboardGui')
+        billboardGui.Name = 'ZoneBillboard'
+        billboardGui.Parent = zone
     end
 
-    local billboardGui = Instance.new('BillboardGui')
-    billboardGui.Name = 'ZoneBillboard'
     billboardGui.AlwaysOnTop = true
     billboardGui.Size = UDim2.fromOffset(220, 64)
     billboardGui.StudsOffset = Vector3.new(0, 6, 0)
-    billboardGui.Parent = zone
 
-    local label = Instance.new('TextLabel')
-    label.Name = 'ZoneLabel'
+    local existingLabel = billboardGui:FindFirstChild('ZoneLabel')
+    local label: TextLabel
+    if existingLabel and existingLabel:IsA('TextLabel') then
+        label = existingLabel
+    else
+        if existingLabel then
+            existingLabel:Destroy()
+        end
+
+        label = Instance.new('TextLabel')
+        label.Name = 'ZoneLabel'
+        label.Parent = billboardGui
+    end
+
     label.Size = UDim2.fromScale(1, 1)
     label.BackgroundTransparency = 1
     label.Font = Enum.Font.GothamBlack
@@ -249,27 +280,35 @@ local function ensureZoneLabel(zone: BasePart, text: string)
     label.TextStrokeTransparency = 0.2
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.Text = text
-    label.Parent = billboardGui
 end
 
 ensureBaseplate()
 ensureWorldDecor()
-local scoreZone = ensureZone(
-    Constants.BLUE_ZONE_NAME,
-    Constants.BLUE_ZONE_CENTER,
-    Constants.BLUE_ZONE_RADIUS,
-    Constants.BLUE_ZONE_HEIGHT,
-    Color3.fromRGB(0, 170, 255),
-    Color3.fromRGB(167, 230, 255)
-)
-local highScoreZone = ensureZone(
-    Constants.RED_ZONE_NAME,
-    Constants.RED_ZONE_CENTER,
-    Constants.RED_ZONE_RADIUS,
-    Constants.RED_ZONE_HEIGHT,
-    Color3.fromRGB(255, 60, 60),
-    Color3.fromRGB(255, 170, 170)
-)
+local obsoleteZoneNames = {
+    'ScoreZone',
+    'HighScoreZone',
+    "1700'sZone",
+}
+
+for _, obsoleteName in ipairs(obsoleteZoneNames) do
+    local obsoleteZone = Workspace:FindFirstChild(obsoleteName)
+    if obsoleteZone and obsoleteZone:IsA('BasePart') then
+        obsoleteZone:Destroy()
+    end
+end
+
+for _, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
+    local zone = ensureZone(
+        zoneConfig.zoneName,
+        zoneConfig.center,
+        zoneConfig.radius,
+        zoneConfig.height,
+        zoneConfig.color,
+        zoneConfig.outlineColor
+    )
+    ensureZoneLabel(zone, zoneConfig.displayName)
+end
+
 local rebirthZone = ensureZone(
     Constants.REBIRTH_ZONE_NAME,
     Constants.REBIRTH_ZONE_CENTER,
@@ -278,16 +317,5 @@ local rebirthZone = ensureZone(
     Color3.fromRGB(255, 0, 255),
     Color3.fromRGB(255, 214, 255)
 )
-local eighteenHundredsZone = ensureZone(
-    Constants.EIGHTEEN_HUNDREDS_ZONE_NAME,
-    Constants.EIGHTEEN_HUNDREDS_ZONE_CENTER,
-    Constants.EIGHTEEN_HUNDREDS_ZONE_RADIUS,
-    Constants.EIGHTEEN_HUNDREDS_ZONE_HEIGHT,
-    Color3.fromRGB(255, 170, 0),
-    Color3.fromRGB(255, 234, 181)
-)
 
-ensureZoneLabel(scoreZone, 'Score')
-ensureZoneLabel(highScoreZone, 'High Score')
 ensureZoneLabel(rebirthZone, 'Rebirth')
-ensureZoneLabel(eighteenHundredsZone, "1700's")

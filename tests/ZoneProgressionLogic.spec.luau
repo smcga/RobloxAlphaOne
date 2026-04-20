@@ -8,14 +8,6 @@ local function expectEqual(actual: number, expected: number, message: string)
     end
 end
 
-local function expectBoolean(actual: boolean, expected: boolean, message: string)
-    if actual ~= expected then
-        error(
-            string.format('%s (expected %s, got %s)', message, tostring(expected), tostring(actual))
-        )
-    end
-end
-
 local function runCase(name: string, fn: () -> ())
     fn()
     print(string.format('[PASS] %s', name))
@@ -24,16 +16,27 @@ end
 local function tick(state, overrides)
     local defaultInput = {
         deltaSeconds = 1,
-        isInsideBlueZone = false,
-        isInsideRedZone = false,
-        isInsideEighteenHundredsZone = false,
+        isInsideAgeZones = {
+            false,
+            false,
+            false,
+        },
+        ageZoneConfigs = {
+            {
+                requiredScore = 0,
+                scoreIncrement = 1,
+            },
+            {
+                requiredScore = 100,
+                scoreIncrement = 50,
+            },
+            {
+                requiredScore = 1000,
+                scoreIncrement = 500,
+            },
+        },
         isInsideRebirthZone = false,
         scoreIntervalSeconds = 1,
-        blueIncrement = 1,
-        redIncrement = 50,
-        redRequiredScore = 100,
-        eighteenHundredsIncrement = 500,
-        eighteenHundredsRequiredScore = 50000000,
         rebirthScoreDivisor = 1000,
     }
 
@@ -44,26 +47,29 @@ local function tick(state, overrides)
     return ZoneProgressionLogic.tick(state, defaultInput)
 end
 
-runCase('standing in blue zone increments by one', function()
+runCase('standing in first age zone increments by one', function()
     local result = tick(ZoneProgressionLogic.newState(0), {
-        isInsideBlueZone = true,
+        isInsideAgeZones = {
+            true,
+            false,
+            false,
+        },
     })
 
-    expectEqual(result.state.score, 1, 'blue zone should increment score by one')
+    expectEqual(result.state.score, 1, 'first age zone should increment score by one')
     expectEqual(result.state.rebirths, 0, 'rebirths should start at zero')
-    expectBoolean(
-        result.shouldPunishForRedZone,
-        false,
-        'blue zone should not trigger red punishment'
-    )
 end)
 
 runCase('rebirth count multiplies score gain per tick', function()
     local result = tick(ZoneProgressionLogic.newState(0, 2), {
-        isInsideBlueZone = true,
+        isInsideAgeZones = {
+            true,
+            false,
+            false,
+        },
     })
 
-    expectEqual(result.state.score, 2, 'two rebirths should double blue score gain')
+    expectEqual(result.state.score, 2, 'two rebirths should double zone score gain')
 end)
 
 runCase('entering rebirth zone resets score and awards rebirths', function()
@@ -87,50 +93,79 @@ runCase('staying in rebirth zone does not repeatedly grant rebirths', function()
     expectEqual(second.state.rebirths, 5, 'rebirth grants should only happen on zone entry')
 end)
 
-runCase('red zone increments by fifty when requirement is met', function()
+runCase('locked age zone increments when requirement is met', function()
     local result = tick(ZoneProgressionLogic.newState(100), {
-        isInsideRedZone = true,
+        isInsideAgeZones = {
+            false,
+            true,
+            false,
+        },
     })
 
-    expectEqual(result.state.score, 150, 'red zone should increment score by fifty')
-    expectBoolean(result.shouldPunishForRedZone, false, 'eligible red zone entry should not punish')
+    expectEqual(result.state.score, 150, 'second age zone should increment by fifty')
 end)
 
-runCase('red zone punishes when score is below requirement', function()
+runCase('locked age zone does not increment when requirement is unmet', function()
     local result = tick(ZoneProgressionLogic.newState(99), {
-        isInsideRedZone = true,
+        isInsideAgeZones = {
+            false,
+            true,
+            false,
+        },
     })
 
-    expectEqual(result.state.score, 99, 'red zone should not add score before requirement')
-    expectBoolean(result.shouldPunishForRedZone, true, 'ineligible red zone entry should punish')
+    expectEqual(result.state.score, 99, 'second age zone should stay locked below requirement')
 end)
 
-runCase('reaching requirement in blue zone unlocks red zone immediately', function()
+runCase('reaching requirement in one age unlocks next age in the same tick', function()
     local result = tick(ZoneProgressionLogic.newState(99), {
-        isInsideBlueZone = true,
-        isInsideRedZone = true,
+        isInsideAgeZones = {
+            true,
+            true,
+            false,
+        },
     })
 
-    expectEqual(result.state.score, 150, 'blue gain should unlock red gain in the same tick')
-    expectBoolean(
-        result.shouldPunishForRedZone,
-        false,
-        'player should not be punished once requirement is met in the same tick'
+    expectEqual(
+        result.state.score,
+        150,
+        'first age gain should unlock second age gain in the same tick'
     )
 end)
 
-runCase("1700's zone increments by 500 when requirement is met", function()
-    local result = tick(ZoneProgressionLogic.newState(50000000), {
-        isInsideEighteenHundredsZone = true,
+runCase('multiple unlocked ages stack in a single tick', function()
+    local result = tick(ZoneProgressionLogic.newState(1000), {
+        isInsideAgeZones = {
+            true,
+            true,
+            true,
+        },
     })
 
-    expectEqual(result.state.score, 50000500, "1700's zone should increment score by five hundred")
+    expectEqual(result.state.score, 1551, 'all unlocked age increments should stack')
 end)
 
-runCase("1700's zone does not increment before requirement is met", function()
-    local result = tick(ZoneProgressionLogic.newState(49999999), {
-        isInsideEighteenHundredsZone = true,
+runCase('rebirth resets accumulated partial time across all ages', function()
+    local first = tick(ZoneProgressionLogic.newState(1999, 0), {
+        deltaSeconds = 0.5,
+        isInsideAgeZones = {
+            true,
+            false,
+            false,
+        },
+    })
+    local rebirthed = tick(first.state, {
+        isInsideRebirthZone = true,
+    })
+    local afterRebirth = tick(rebirthed.state, {
+        deltaSeconds = 0.5,
+        isInsideAgeZones = {
+            true,
+            false,
+            false,
+        },
     })
 
-    expectEqual(result.state.score, 49999999, "1700's zone should stay locked below requirement")
+    expectEqual(rebirthed.state.score, 0, 'rebirth should reset score to zero')
+    expectEqual(afterRebirth.state.score, 0, 'partial age timers should reset on rebirth')
 end)
