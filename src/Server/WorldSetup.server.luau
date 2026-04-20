@@ -91,6 +91,20 @@ local function getFirstPlaceableChild(container: Instance): Instance?
     return nil
 end
 
+local function getMeshPartTemplate(assetId: number): MeshPart?
+    local ok, meshPart = pcall(function()
+        return InsertService:CreateMeshPartAsync(string.format('rbxassetid://%d', assetId))
+    end)
+
+    if not ok or meshPart == nil then
+        return nil
+    end
+
+    meshPart.Anchored = true
+    meshPart.CanCollide = true
+    return meshPart
+end
+
 local function getAssetTemplate(assetId: number): Instance?
     local cached = ASSET_TEMPLATE_CACHE[assetId]
     if cached then
@@ -102,6 +116,12 @@ local function getAssetTemplate(assetId: number): Instance?
     end)
 
     if not ok or loaded == nil then
+        local meshTemplate = getMeshPartTemplate(assetId)
+        if meshTemplate then
+            ASSET_TEMPLATE_CACHE[assetId] = meshTemplate
+            return meshTemplate
+        end
+
         warn(string.format('World decor asset %d failed to load', assetId))
         return nil
     end
@@ -109,6 +129,12 @@ local function getAssetTemplate(assetId: number): Instance?
     local template = getFirstPlaceableChild(loaded)
     if not template then
         loaded:Destroy()
+        local meshTemplate = getMeshPartTemplate(assetId)
+        if meshTemplate then
+            ASSET_TEMPLATE_CACHE[assetId] = meshTemplate
+            return meshTemplate
+        end
+
         warn(string.format('World decor asset %d had no placeable model', assetId))
         return nil
     end

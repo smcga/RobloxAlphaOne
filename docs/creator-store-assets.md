@@ -19,3 +19,5 @@ This file is the source of truth for Roblox Creator Store assets currently refer
 ## Maintenance rule
 
 When Creator Store assets are added, removed, or replaced in code, update this file in the same change.
+
+World loading supports both model-style assets (`InsertService:LoadAsset`) and mesh-style assets (`InsertService:CreateMeshPartAsync`) so mixed Creator Store IDs can still appear as decor.

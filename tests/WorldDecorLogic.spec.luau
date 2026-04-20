@@ -190,9 +190,11 @@ end)
 
 runCase('age of beads creator-store decor stays near the age zone center', function()
     local specs = WorldDecorLogic.getDecorSpecs()
+    local ageOfBeadsAssetCount = 0
 
     for _, spec in specs do
         if spec.kind == 'Asset' and string.sub(spec.name, 1, 10) == 'AgeOfBeads' then
+            ageOfBeadsAssetCount += 1
             local xDistance = math.abs(spec.position.x - AGE_OF_BEADS_ZONE_CENTER_X)
             local zDistance = math.abs(spec.position.z - AGE_OF_BEADS_ZONE_CENTER_Z)
             local maxAxisDistance = math.max(xDistance, zDistance)
@@ -202,6 +204,12 @@ runCase('age of beads creator-store decor stays near the age zone center', funct
             end
         end
     end
+
+    expectEqual(
+        ageOfBeadsAssetCount,
+        7,
+        'expected exactly seven age-of-beads creator-store placements'
+    )
 end)
 
 runCase('critical cylinder props are rotated into their intended orientation', function()
