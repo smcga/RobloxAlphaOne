@@ -3,30 +3,26 @@ local ScoreLogic = require('./ScoreLogic')
 export type ZoneProgressionState = {
     score: number,
     rebirths: number,
-    blueAccumulatorSeconds: number,
-    redAccumulatorSeconds: number,
-    eighteenHundredsAccumulatorSeconds: number,
+    ageAccumulatorSeconds: { [number]: number },
     wasInsideRebirthZone: boolean,
+}
+
+export type AgeZoneProgressionConfig = {
+    requiredScore: number,
+    scoreIncrement: number,
 }
 
 export type ZoneProgressionInput = {
     deltaSeconds: number,
-    isInsideBlueZone: boolean,
-    isInsideRedZone: boolean,
+    isInsideAgeZones: { [number]: boolean },
+    ageZoneConfigs: { AgeZoneProgressionConfig },
     scoreIntervalSeconds: number,
-    blueIncrement: number,
-    redIncrement: number,
-    redRequiredScore: number,
-    isInsideEighteenHundredsZone: boolean,
-    eighteenHundredsIncrement: number,
-    eighteenHundredsRequiredScore: number,
     isInsideRebirthZone: boolean,
     rebirthScoreDivisor: number,
 }
 
 export type ZoneProgressionResult = {
     state: ZoneProgressionState,
-    shouldPunishForRedZone: boolean,
 }
 
 local ZoneProgressionLogic = {}
@@ -38,9 +34,7 @@ function ZoneProgressionLogic.newState(
     return {
         score = initialScore or 0,
         rebirths = initialRebirths or 0,
-        blueAccumulatorSeconds = 0,
-        redAccumulatorSeconds = 0,
-        eighteenHundredsAccumulatorSeconds = 0,
+        ageAccumulatorSeconds = {},
         wasInsideRebirthZone = false,
     }
 end
@@ -50,68 +44,46 @@ function ZoneProgressionLogic.tick(
     input: ZoneProgressionInput
 ): ZoneProgressionResult
     local scoreMultiplier = math.max(state.rebirths, 1)
-    local blueTickState = ScoreLogic.tick(
-        {
-            score = state.score,
-            accumulatorSeconds = state.blueAccumulatorSeconds,
-        },
-        input.deltaSeconds,
-        input.isInsideBlueZone,
-        input.scoreIntervalSeconds,
-        input.blueIncrement * scoreMultiplier
-    )
+    local score = state.score
+    local ageAccumulatorSeconds = {}
+    local zoneCount = #input.ageZoneConfigs
 
-    local canUseRedZone = blueTickState.score >= input.redRequiredScore
-    local shouldPunishForRedZone = input.isInsideRedZone and not canUseRedZone
+    for index = 1, zoneCount do
+        local zoneConfig = input.ageZoneConfigs[index]
+        local zoneAccumulator = state.ageAccumulatorSeconds[index] or 0
+        local isInsideZone = input.isInsideAgeZones[index] == true
+        local canUseZone = score >= zoneConfig.requiredScore
 
-    local redTickState = ScoreLogic.tick(
-        {
-            score = blueTickState.score,
-            accumulatorSeconds = state.redAccumulatorSeconds,
-        },
-        input.deltaSeconds,
-        input.isInsideRedZone and canUseRedZone,
-        input.scoreIntervalSeconds,
-        input.redIncrement * scoreMultiplier
-    )
-
-    local canUseEighteenHundredsZone = redTickState.score >= input.eighteenHundredsRequiredScore
-    local eighteenHundredsTickState = ScoreLogic.tick(
-        {
-            score = redTickState.score,
-            accumulatorSeconds = state.eighteenHundredsAccumulatorSeconds,
-        },
-        input.deltaSeconds,
-        input.isInsideEighteenHundredsZone and canUseEighteenHundredsZone,
-        input.scoreIntervalSeconds,
-        input.eighteenHundredsIncrement * scoreMultiplier
-    )
+        local zoneTickState = ScoreLogic.tick(
+            {
+                score = score,
+                accumulatorSeconds = zoneAccumulator,
+            },
+            input.deltaSeconds,
+            isInsideZone and canUseZone,
+            input.scoreIntervalSeconds,
+            zoneConfig.scoreIncrement * scoreMultiplier
+        )
+        score = zoneTickState.score
+        ageAccumulatorSeconds[index] = zoneTickState.accumulatorSeconds
+    end
 
     local enteredRebirthZone = input.isInsideRebirthZone and not state.wasInsideRebirthZone
     local rebirths = state.rebirths
-    local score = eighteenHundredsTickState.score
-    local blueAccumulatorSeconds = blueTickState.accumulatorSeconds
-    local redAccumulatorSeconds = redTickState.accumulatorSeconds
-    local eighteenHundredsAccumulatorSeconds = eighteenHundredsTickState.accumulatorSeconds
 
     if enteredRebirthZone then
         rebirths += math.floor(score / input.rebirthScoreDivisor)
         score = 0
-        blueAccumulatorSeconds = 0
-        redAccumulatorSeconds = 0
-        eighteenHundredsAccumulatorSeconds = 0
+        ageAccumulatorSeconds = {}
     end
 
     return {
         state = {
             score = score,
             rebirths = rebirths,
-            blueAccumulatorSeconds = blueAccumulatorSeconds,
-            redAccumulatorSeconds = redAccumulatorSeconds,
-            eighteenHundredsAccumulatorSeconds = eighteenHundredsAccumulatorSeconds,
+            ageAccumulatorSeconds = ageAccumulatorSeconds,
             wasInsideRebirthZone = input.isInsideRebirthZone,
         },
-        shouldPunishForRedZone = shouldPunishForRedZone,
     }
 end
 

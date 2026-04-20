@@ -4,17 +4,15 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 
 ## What this project does
 - Spawns players into a stylized starter world with a baseplate, hills, paths, Creator Store tree assets ("Realistic Trees", asset `3256343670`), and flower bush assets ("Realistic bush flowers mesh", asset `9187138703`) plus deterministic path/hill/rock props built from decor specs.
-- Creates visible glowing circular scoring zones (blue + red).
+- Creates visible glowing circular scoring zones across 12 progression ages.
 - Shows `Score: 0` UI on join/spawn.
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
 - Shows `Rebirths: 0` UI under score on join/spawn.
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
 - Shows an owner-only admin panel with buttons to multiply current score by `2x` or `10x`.
-- Increments score by exactly `+1` per second while inside the blue zone (based on horizontal position in the circle).
+- Increments score while inside age zones, with each age granting a higher score-per-second multiplier.
 - Applies a rebirth multiplier to score gain (`max(Rebirths, 1)`), so `2` rebirths means `2x` score/sec.
-- Unlocks a red high-score zone at `100` points that grants `+50` per second while inside it.
-- Unlocks a `1700's` zone at `50,000,000` points that grants `+500` per second while inside it.
-- Entering the red zone before `100` score launches the player away and then kills them.
+- Unlock requirements and score gains scale so each age takes roughly the same active time to complete while totals grow exponentially.
 - Entering the glowing `Rebirth` zone converts score into rebirths (`+1` per `1000` score) and resets score to `0`.
 - Stops score gain immediately when leaving each zone.
 - Keeps score server-authoritative and persistent across death/rejoin with Roblox DataStore.
@@ -92,14 +90,12 @@ Keep this terminal running while you work.
 3. Connect the plugin to the running Rojo server from Step 5.
 4. Start Play mode.
 5. Verify expected MVP behavior:
-   - A `Baseplate`, a `WorldDecor` folder (hills/paths/rocks plus inserted Creator Store realistic tree assets), blue `ScoreZone`, red `HighScoreZone`, orange `1700'sZone`, and magenta `RebirthZone` appear in `Workspace`.
+   - A `Baseplate`, a `WorldDecor` folder (hills/paths/rocks plus inserted Creator Store realistic tree assets), twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
    - Whenever score increases, you see a brief floating popup with the compact increase amount (example: `+1.6k`) at a random position.
-   - Standing inside the blue zone adds exactly `+1` score per second.
-   - Score gain scales with rebirths (example: `2` rebirths => `+2`/sec in blue zone).
-   - At `100+` score, standing in the red zone adds exactly `+50` score per second.
-   - At `50,000,000+` score, standing in the `1700's` zone adds exactly `+500` score per second.
-   - Entering the red zone below `100` score launches and kills the player.
+   - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
+   - Score gain scales with rebirths (example: `2` rebirths doubles whichever age-zone gain is active).
+   - Age zones unlock in sequence as your score passes each requirement threshold.
    - Entering the `Rebirth` zone resets score to `0` and grants `floor(score / 1000)` rebirths.
    - If you're the game owner, admin panel buttons can multiply your current score by `2x` or `10x`.
    - Leaving zones stops score gain immediately.
