@@ -1,6 +1,7 @@
 local WorldDecorLogic = require('../src/Shared/WorldDecorLogic')
 
 local FLOOR_Y = -0.5
+local REALISTIC_TREES_ASSET_ID = 3256343670
 
 local function expectEqual<T>(actual: T, expected: T, message: string)
     if actual ~= expected then
@@ -21,7 +22,7 @@ local function runCase(name: string, fn: () -> ())
     print(string.format('[PASS] %s', name))
 end
 
-local function getVerticalHalfExtent(spec: WorldDecorLogic.DecorSpec): number
+local function getVerticalHalfExtent(spec: WorldDecorLogic.PartDecorSpec): number
     if spec.shape == 'Cylinder' then
         local rotation = spec.rotation
         if rotation and math.abs(rotation.z) % 180 == 90 then
@@ -34,54 +35,61 @@ end
 
 runCase('decor specs include stable scene pieces', function()
     local specs = WorldDecorLogic.getDecorSpecs()
-    expectEqual(#specs, 21, 'scene should include the expected number of decor parts')
+    expectEqual(#specs, 13, 'scene should include the expected number of decor entries')
 
     local foundMainPath = false
-    local foundTreeLeaves = false
     local foundRockCluster = false
-    local foundFlowerPatch = false
+    local foundAssetTree = false
 
     for _, spec in specs do
         if spec.name == 'MainPath' then
             foundMainPath = true
         end
 
-        if spec.name == 'NorthTreeLeaves' then
-            foundTreeLeaves = true
-        end
-
         if spec.name == 'NorthRockCluster' then
             foundRockCluster = true
         end
 
-        if spec.name == 'SouthFlowerPatch' then
-            foundFlowerPatch = true
+        if spec.name == 'RealisticTreeNorth' then
+            foundAssetTree = true
         end
     end
 
     expectTruthy(foundMainPath, 'main path decor should exist')
-    expectTruthy(foundTreeLeaves, 'tree leaves decor should exist')
     expectTruthy(foundRockCluster, 'rock cluster decor should exist')
-    expectTruthy(foundFlowerPatch, 'flower patch decor should exist')
+    expectTruthy(foundAssetTree, 'asset tree decor should exist')
+end)
+
+runCase('realistic tree entries use creator store asset id', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+    local foundAssetCount = 0
+
+    for _, spec in specs do
+        if spec.kind == 'Asset' then
+            foundAssetCount += 1
+            expectEqual(
+                spec.assetId,
+                REALISTIC_TREES_ASSET_ID,
+                string.format('%s should use expected asset id', spec.name)
+            )
+            expectTruthy(spec.scale ~= nil and spec.scale > 0, 'asset entry should define a scale')
+        end
+    end
+
+    expectEqual(foundAssetCount, 4, 'expected exactly four realistic tree asset placements')
 end)
 
 runCase('critical cylinder props are rotated into their intended orientation', function()
     local specs = WorldDecorLogic.getDecorSpecs()
     local expectedRotations = {
         CenterPad = 90,
-        NorthTree = 90,
-        SouthTree = 90,
-        PineNorthTrunk = 90,
-        PineSouthTrunk = 90,
-        NorthFlowerPatch = 90,
-        SouthFlowerPatch = 90,
     }
 
     for decorName, expectedZRotation in expectedRotations do
         local foundSpec = nil
 
         for _, spec in specs do
-            if spec.name == decorName then
+            if spec.name == decorName and spec.kind == 'Part' then
                 foundSpec = spec
                 break
             end
@@ -108,13 +116,17 @@ runCase('decor specs stay near the base playable area', function()
     end
 end)
 
-runCase('decor does not clip deeply below the floor', function()
+runCase('part-based decor does not clip deeply below the floor', function()
     local specs = WorldDecorLogic.getDecorSpecs()
 
     for _, spec in specs do
-        local bottomY = spec.position.y - getVerticalHalfExtent(spec)
-        if bottomY < FLOOR_Y then
-            error(string.format('decor %s clips below floor (bottomY=%0.2f)', spec.name, bottomY))
+        if spec.kind == 'Part' then
+            local bottomY = spec.position.y - getVerticalHalfExtent(spec)
+            if bottomY < FLOOR_Y then
+                error(
+                    string.format('decor %s clips below floor (bottomY=%0.2f)', spec.name, bottomY)
+                )
+            end
         end
     end
 end)

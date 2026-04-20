@@ -12,7 +12,8 @@ export type Color3Spec = {
     b: number,
 }
 
-export type DecorSpec = {
+export type PartDecorSpec = {
+    kind: 'Part',
     name: string,
     shape: DecorShape,
     size: Vector3Spec,
@@ -23,10 +24,24 @@ export type DecorSpec = {
     transparency: number?,
 }
 
+export type AssetDecorSpec = {
+    kind: 'Asset',
+    name: string,
+    assetId: number,
+    position: Vector3Spec,
+    rotation: Vector3Spec?,
+    scale: number?,
+}
+
+export type DecorSpec = PartDecorSpec | AssetDecorSpec
+
 local WorldDecorLogic = {}
+
+local REALISTIC_TREES_ASSET_ID = 3256343670
 
 local DECOR_SPECS: { DecorSpec } = {
     {
+        kind = 'Part',
         name = 'CenterPad',
         shape = 'Cylinder',
         size = { x = 2, y = 52, z = 52 },
@@ -36,6 +51,7 @@ local DECOR_SPECS: { DecorSpec } = {
         material = 'Slate',
     },
     {
+        kind = 'Part',
         name = 'NorthHill',
         shape = 'Ball',
         size = { x = 26, y = 14, z = 26 },
@@ -44,6 +60,7 @@ local DECOR_SPECS: { DecorSpec } = {
         material = 'Grass',
     },
     {
+        kind = 'Part',
         name = 'SouthHill',
         shape = 'Ball',
         size = { x = 32, y = 16, z = 32 },
@@ -52,6 +69,7 @@ local DECOR_SPECS: { DecorSpec } = {
         material = 'Grass',
     },
     {
+        kind = 'Part',
         name = 'EastHill',
         shape = 'Ball',
         size = { x = 24, y = 10, z = 24 },
@@ -60,6 +78,7 @@ local DECOR_SPECS: { DecorSpec } = {
         material = 'Grass',
     },
     {
+        kind = 'Part',
         name = 'WestHill',
         shape = 'Ball',
         size = { x = 28, y = 11, z = 28 },
@@ -68,6 +87,7 @@ local DECOR_SPECS: { DecorSpec } = {
         material = 'Grass',
     },
     {
+        kind = 'Part',
         name = 'MainPath',
         shape = 'Block',
         size = { x = 88, y = 1, z = 10 },
@@ -76,6 +96,7 @@ local DECOR_SPECS: { DecorSpec } = {
         material = 'Slate',
     },
     {
+        kind = 'Part',
         name = 'RebirthPath',
         shape = 'Block',
         size = { x = 50, y = 1, z = 10 },
@@ -84,90 +105,7 @@ local DECOR_SPECS: { DecorSpec } = {
         material = 'Slate',
     },
     {
-        name = 'NorthTree',
-        shape = 'Cylinder',
-        size = { x = 8, y = 3, z = 3 },
-        position = { x = 18, y = 4, z = -28 },
-        rotation = { x = 0, y = 0, z = 90 },
-        color = { r = 84, g = 55, b = 33 },
-        material = 'Wood',
-    },
-    {
-        name = 'NorthTreeLeaves',
-        shape = 'Ball',
-        size = { x = 10, y = 10, z = 10 },
-        position = { x = 18, y = 10, z = -28 },
-        color = { r = 69, g = 125, b = 64 },
-        material = 'Grass',
-    },
-    {
-        name = 'SouthTree',
-        shape = 'Cylinder',
-        size = { x = 8, y = 3, z = 3 },
-        position = { x = -22, y = 4, z = 26 },
-        rotation = { x = 0, y = 0, z = 90 },
-        color = { r = 84, g = 55, b = 33 },
-        material = 'Wood',
-    },
-    {
-        name = 'SouthTreeLeaves',
-        shape = 'Ball',
-        size = { x = 10, y = 10, z = 10 },
-        position = { x = -22, y = 10, z = 26 },
-        color = { r = 69, g = 125, b = 64 },
-        material = 'Grass',
-    },
-    {
-        name = 'PineNorthTrunk',
-        shape = 'Cylinder',
-        size = { x = 9, y = 2.5, z = 2.5 },
-        position = { x = 34, y = 4.5, z = -38 },
-        rotation = { x = 0, y = 0, z = 90 },
-        color = { r = 88, g = 58, b = 34 },
-        material = 'Wood',
-    },
-    {
-        name = 'PineNorthCanopy',
-        shape = 'Ball',
-        size = { x = 12, y = 13, z = 12 },
-        position = { x = 34, y = 11, z = -38 },
-        color = { r = 58, g = 116, b = 67 },
-        material = 'Grass',
-    },
-    {
-        name = 'PineSouthTrunk',
-        shape = 'Cylinder',
-        size = { x = 9, y = 2.5, z = 2.5 },
-        position = { x = -35, y = 4.5, z = 34 },
-        rotation = { x = 0, y = 0, z = 90 },
-        color = { r = 88, g = 58, b = 34 },
-        material = 'Wood',
-    },
-    {
-        name = 'PineSouthCanopy',
-        shape = 'Ball',
-        size = { x = 11, y = 12, z = 11 },
-        position = { x = -35, y = 10.5, z = 34 },
-        color = { r = 56, g = 109, b = 62 },
-        material = 'Grass',
-    },
-    {
-        name = 'EastBushPatch',
-        shape = 'Ball',
-        size = { x = 7, y = 4, z = 7 },
-        position = { x = 39, y = 1.6, z = 7 },
-        color = { r = 63, g = 119, b = 58 },
-        material = 'Grass',
-    },
-    {
-        name = 'WestBushPatch',
-        shape = 'Ball',
-        size = { x = 8, y = 4, z = 8 },
-        position = { x = -39, y = 1.6, z = -8 },
-        color = { r = 61, g = 117, b = 56 },
-        material = 'Grass',
-    },
-    {
+        kind = 'Part',
         name = 'NorthRockCluster',
         shape = 'Block',
         size = { x = 6, y = 3.2, z = 4.5 },
@@ -177,6 +115,7 @@ local DECOR_SPECS: { DecorSpec } = {
         material = 'Slate',
     },
     {
+        kind = 'Part',
         name = 'SouthRockCluster',
         shape = 'Block',
         size = { x = 5.5, y = 3, z = 4 },
@@ -186,24 +125,35 @@ local DECOR_SPECS: { DecorSpec } = {
         material = 'Slate',
     },
     {
-        name = 'NorthFlowerPatch',
-        shape = 'Cylinder',
-        size = { x = 0.4, y = 6, z = 6 },
-        position = { x = 29, y = -0.25, z = -15 },
-        rotation = { x = 0, y = 0, z = 90 },
-        color = { r = 198, g = 120, b = 165 },
-        material = 'Grass',
-        transparency = 0.2,
+        kind = 'Asset',
+        name = 'RealisticTreeNorth',
+        assetId = REALISTIC_TREES_ASSET_ID,
+        position = { x = 24, y = 0, z = -28 },
+        scale = 0.4,
     },
     {
-        name = 'SouthFlowerPatch',
-        shape = 'Cylinder',
-        size = { x = 0.4, y = 5.5, z = 5.5 },
-        position = { x = -28, y = -0.25, z = 13 },
-        rotation = { x = 0, y = 0, z = 90 },
-        color = { r = 203, g = 166, b = 98 },
-        material = 'Grass',
-        transparency = 0.2,
+        kind = 'Asset',
+        name = 'RealisticTreeNorthEast',
+        assetId = REALISTIC_TREES_ASSET_ID,
+        position = { x = 40, y = 0, z = -22 },
+        rotation = { x = 0, y = 110, z = 0 },
+        scale = 0.35,
+    },
+    {
+        kind = 'Asset',
+        name = 'RealisticTreeSouth',
+        assetId = REALISTIC_TREES_ASSET_ID,
+        position = { x = -26, y = 0, z = 28 },
+        rotation = { x = 0, y = 180, z = 0 },
+        scale = 0.4,
+    },
+    {
+        kind = 'Asset',
+        name = 'RealisticTreeWest',
+        assetId = REALISTIC_TREES_ASSET_ID,
+        position = { x = -40, y = 0, z = -10 },
+        rotation = { x = 0, y = -75, z = 0 },
+        scale = 0.32,
     },
 }
 
