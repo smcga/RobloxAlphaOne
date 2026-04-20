@@ -37,6 +37,19 @@ local function toColor3(color: WorldDecorLogic.Color3Spec): Color3
     return Color3.fromRGB(color.r, color.g, color.b)
 end
 
+local function toCFrame(
+    position: WorldDecorLogic.Vector3Spec,
+    rotation: WorldDecorLogic.Vector3Spec?
+): CFrame
+    local worldPosition = toVector3(position)
+    if rotation == nil then
+        return CFrame.new(worldPosition)
+    end
+
+    return CFrame.new(worldPosition)
+        * CFrame.Angles(math.rad(rotation.x), math.rad(rotation.y), math.rad(rotation.z))
+end
+
 local function applyDecorShape(part: Part, shapeName: WorldDecorLogic.DecorShape)
     if shapeName == 'Cylinder' then
         part.Shape = Enum.PartType.Cylinder
@@ -61,7 +74,7 @@ local function ensureDecorPart(parent: Instance, spec: WorldDecorLogic.DecorSpec
 
     part.Anchored = true
     part.Size = toVector3(spec.size)
-    part.Position = toVector3(spec.position)
+    part.CFrame = toCFrame(spec.position, spec.rotation)
     part.Color = toColor3(spec.color)
     part.Material = DECOR_MATERIALS[spec.material] or Enum.Material.SmoothPlastic
     part.Transparency = spec.transparency or 0
