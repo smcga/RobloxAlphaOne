@@ -22,3 +22,8 @@
 - Keep `aftman.toml`, `wally.toml`, Selene, StyLua, and workflows in sync with code changes.
 - Run format, lint, tests, and Rojo build validation when practical.
 - Update README whenever setup or commands change.
+
+## World placement guardrails
+- For `Cylinder` decor parts, explicitly set rotation so their intended axis is correct (for example, `z=90` to stand trunks upright or lay circular pads flat).
+- Position parts using center-based math (`position.y >= floorY + halfHeight`) so props do not clip severely through the baseplate.
+- When adjusting world props, add/update deterministic tests that verify orientation-critical pieces and floor clipping constraints.
