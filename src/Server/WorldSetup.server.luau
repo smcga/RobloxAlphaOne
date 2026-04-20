@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService('ReplicatedStorage')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
+local WorldDecorLogic = require(Shared:WaitForChild('WorldDecorLogic'))
 
 local function ensureBaseplate(): Part
     local existing = Workspace:FindFirstChild('Baseplate')
@@ -20,6 +21,65 @@ local function ensureBaseplate(): Part
     baseplate.Parent = Workspace
 
     return baseplate
+end
+
+local DECOR_MATERIALS: { [string]: Enum.Material } = {
+    Slate = Enum.Material.Slate,
+    Grass = Enum.Material.Grass,
+    Wood = Enum.Material.Wood,
+}
+
+local function toVector3(vector: WorldDecorLogic.Vector3Spec): Vector3
+    return Vector3.new(vector.x, vector.y, vector.z)
+end
+
+local function toColor3(color: WorldDecorLogic.Color3Spec): Color3
+    return Color3.fromRGB(color.r, color.g, color.b)
+end
+
+local function applyDecorShape(part: Part, shapeName: WorldDecorLogic.DecorShape)
+    if shapeName == 'Cylinder' then
+        part.Shape = Enum.PartType.Cylinder
+    elseif shapeName == 'Ball' then
+        part.Shape = Enum.PartType.Ball
+    else
+        part.Shape = Enum.PartType.Block
+    end
+end
+
+local function ensureDecorPart(parent: Instance, spec: WorldDecorLogic.DecorSpec)
+    local existing = parent:FindFirstChild(spec.name)
+    local part: Part
+
+    if existing and existing:IsA('Part') then
+        part = existing
+    else
+        part = Instance.new('Part')
+        part.Name = spec.name
+        part.Parent = parent
+    end
+
+    part.Anchored = true
+    part.Size = toVector3(spec.size)
+    part.Position = toVector3(spec.position)
+    part.Color = toColor3(spec.color)
+    part.Material = DECOR_MATERIALS[spec.material] or Enum.Material.SmoothPlastic
+    part.Transparency = spec.transparency or 0
+    part.CanCollide = true
+    applyDecorShape(part, spec.shape)
+end
+
+local function ensureWorldDecor()
+    local decorFolder = Workspace:FindFirstChild('WorldDecor')
+    if not decorFolder or not decorFolder:IsA('Folder') then
+        decorFolder = Instance.new('Folder')
+        decorFolder.Name = 'WorldDecor'
+        decorFolder.Parent = Workspace
+    end
+
+    for _, spec in WorldDecorLogic.getDecorSpecs() do
+        ensureDecorPart(decorFolder, spec)
+    end
 end
 
 local function ensureZone(
@@ -86,6 +146,7 @@ local function ensureZoneLabel(zone: BasePart, text: string)
 end
 
 ensureBaseplate()
+ensureWorldDecor()
 local scoreZone = ensureZone(
     Constants.BLUE_ZONE_NAME,
     Constants.BLUE_ZONE_CENTER,
