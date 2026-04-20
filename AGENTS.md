@@ -27,3 +27,10 @@
 - For `Cylinder` decor parts, explicitly set rotation so their intended axis is correct (for example, `z=90` to stand trunks upright or lay circular pads flat).
 - Position parts using center-based math (`position.y >= floorY + halfHeight`) so props do not clip severely through the baseplate.
 - When adjusting world props, add/update deterministic tests that verify orientation-critical pieces and floor clipping constraints.
+
+
+## Creator Store asset handling
+- Treat user phrases like **store assets**, **creator assets**, **free assets**, **Creator Store assets**, or misspellings like **creatore store assets** as requests about Roblox Creator Store assets.
+- When a user gives an asset name but not an ID, determine the asset ID before implementation (check this repo first, then perform Creator Store lookup if needed).
+- Prefer explicit asset IDs in code/config to avoid ambiguity.
+- Keep `docs/creator-store-assets.md` synchronized whenever Creator Store assets are added, removed, renamed, or replaced.

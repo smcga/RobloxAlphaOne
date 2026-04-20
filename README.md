@@ -3,7 +3,7 @@
 A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-place).
 
 ## What this project does
-- Spawns players into a stylized starter world with a baseplate, hills, paths, and simple tree props.
+- Spawns players into a stylized starter world with a baseplate, hills, paths, and Creator Store tree assets ("Realistic Trees", asset `3256343670`) plus deterministic path/hill/rock props built from decor specs.
 - Creates visible glowing circular scoring zones (blue + red).
 - Shows `Score: 0` UI on join/spawn.
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
@@ -92,7 +92,7 @@ Keep this terminal running while you work.
 3. Connect the plugin to the running Rojo server from Step 5.
 4. Start Play mode.
 5. Verify expected MVP behavior:
-   - A `Baseplate`, a `WorldDecor` folder (hills/paths/trees), blue `ScoreZone`, red `HighScoreZone`, orange `1700'sZone`, and magenta `RebirthZone` appear in `Workspace`.
+   - A `Baseplate`, a `WorldDecor` folder (hills/paths/rocks plus inserted Creator Store realistic tree assets), blue `ScoreZone`, red `HighScoreZone`, orange `1700'sZone`, and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
    - Whenever score increases, you see a brief floating popup with the compact increase amount (example: `+1.6k`) at a random position.
    - Standing inside the blue zone adds exactly `+1` score per second.

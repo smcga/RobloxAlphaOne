@@ -1,5 +1,6 @@
 local Workspace = game:GetService('Workspace')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local InsertService = game:GetService('InsertService')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
@@ -60,13 +61,66 @@ local function applyDecorShape(part: Part, shapeName: WorldDecorLogic.DecorShape
     end
 end
 
-local function ensureDecorPart(parent: Instance, spec: WorldDecorLogic.DecorSpec)
+local ASSET_TEMPLATE_CACHE: { [number]: Instance } = {}
+
+local function getFirstPlaceableChild(container: Instance): Instance?
+    for _, child in container:GetChildren() do
+        if child:IsA('Model') or child:IsA('BasePart') then
+            return child
+        end
+    end
+
+    return nil
+end
+
+local function getAssetTemplate(assetId: number): Instance?
+    local cached = ASSET_TEMPLATE_CACHE[assetId]
+    if cached then
+        return cached
+    end
+
+    local ok, loaded = pcall(function()
+        return InsertService:LoadAsset(assetId)
+    end)
+
+    if not ok or loaded == nil then
+        warn(string.format('World decor asset %d failed to load', assetId))
+        return nil
+    end
+
+    local template = getFirstPlaceableChild(loaded)
+    if not template then
+        loaded:Destroy()
+        warn(string.format('World decor asset %d had no placeable model', assetId))
+        return nil
+    end
+
+    local detachedTemplate = template:Clone()
+    loaded:Destroy()
+    ASSET_TEMPLATE_CACHE[assetId] = detachedTemplate
+    return detachedTemplate
+end
+
+local function anchorModel(model: Model)
+    for _, descendant in model:GetDescendants() do
+        if descendant:IsA('BasePart') then
+            descendant.Anchored = true
+            descendant.CanCollide = true
+        end
+    end
+end
+
+local function ensurePartDecor(parent: Instance, spec: WorldDecorLogic.PartDecorSpec)
     local existing = parent:FindFirstChild(spec.name)
     local part: Part
 
     if existing and existing:IsA('Part') then
         part = existing
     else
+        if existing then
+            existing:Destroy()
+        end
+
         part = Instance.new('Part')
         part.Name = spec.name
         part.Parent = parent
@@ -82,6 +136,42 @@ local function ensureDecorPart(parent: Instance, spec: WorldDecorLogic.DecorSpec
     applyDecorShape(part, spec.shape)
 end
 
+local function ensureAssetDecor(parent: Instance, spec: WorldDecorLogic.AssetDecorSpec)
+    local existing = parent:FindFirstChild(spec.name)
+    local target = existing
+
+    if not target or (not target:IsA('Model') and not target:IsA('BasePart')) then
+        if target then
+            target:Destroy()
+        end
+
+        local template = getAssetTemplate(spec.assetId)
+        if not template then
+            return
+        end
+
+        target = template:Clone()
+        target.Name = spec.name
+        target.Parent = parent
+    end
+
+    local targetCFrame = toCFrame(spec.position, spec.rotation)
+
+    if target:IsA('Model') then
+        if spec.scale then
+            target:ScaleTo(spec.scale)
+        end
+
+        anchorModel(target)
+        target:PivotTo(targetCFrame)
+        return
+    end
+
+    target.Anchored = true
+    target.CanCollide = true
+    target.CFrame = targetCFrame
+end
+
 local function ensureWorldDecor()
     local decorFolder = Workspace:FindFirstChild('WorldDecor')
     if not decorFolder or not decorFolder:IsA('Folder') then
@@ -91,7 +181,11 @@ local function ensureWorldDecor()
     end
 
     for _, spec in WorldDecorLogic.getDecorSpecs() do
-        ensureDecorPart(decorFolder, spec)
+        if spec.kind == 'Asset' then
+            ensureAssetDecor(decorFolder, spec)
+        else
+            ensurePartDecor(decorFolder, spec)
+        end
     end
 end
 
