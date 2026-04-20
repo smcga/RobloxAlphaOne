@@ -65,12 +65,48 @@ local ASSET_TEMPLATE_CACHE: { [number]: Instance } = {}
 
 local function getFirstPlaceableChild(container: Instance): Instance?
     for _, child in container:GetChildren() do
-        if child:IsA('Model') or child:IsA('BasePart') then
+        if child:IsA('Model') then
             return child
         end
     end
 
+    for _, descendant in container:GetDescendants() do
+        if descendant:IsA('Model') then
+            return descendant
+        end
+    end
+
+    for _, child in container:GetChildren() do
+        if child:IsA('BasePart') then
+            return child
+        end
+    end
+
+    for _, descendant in container:GetDescendants() do
+        if descendant:IsA('BasePart') then
+            return descendant
+        end
+    end
+
     return nil
+end
+
+local function getMeshPartTemplate(assetId: number): MeshPart?
+    local ok, meshPart = pcall(function()
+        return InsertService:CreateMeshPartAsync(
+            string.format('rbxassetid://%d', assetId),
+            Enum.CollisionFidelity.Default,
+            Enum.RenderFidelity.Automatic
+        )
+    end)
+
+    if not ok or meshPart == nil then
+        return nil
+    end
+
+    meshPart.Anchored = true
+    meshPart.CanCollide = true
+    return meshPart
 end
 
 local function getAssetTemplate(assetId: number): Instance?
@@ -84,6 +120,12 @@ local function getAssetTemplate(assetId: number): Instance?
     end)
 
     if not ok or loaded == nil then
+        local meshTemplate = getMeshPartTemplate(assetId)
+        if meshTemplate then
+            ASSET_TEMPLATE_CACHE[assetId] = meshTemplate
+            return meshTemplate
+        end
+
         warn(string.format('World decor asset %d failed to load', assetId))
         return nil
     end
@@ -91,6 +133,12 @@ local function getAssetTemplate(assetId: number): Instance?
     local template = getFirstPlaceableChild(loaded)
     if not template then
         loaded:Destroy()
+        local meshTemplate = getMeshPartTemplate(assetId)
+        if meshTemplate then
+            ASSET_TEMPLATE_CACHE[assetId] = meshTemplate
+            return meshTemplate
+        end
+
         warn(string.format('World decor asset %d had no placeable model', assetId))
         return nil
     end
@@ -136,6 +184,59 @@ local function ensurePartDecor(parent: Instance, spec: WorldDecorLogic.PartDecor
     applyDecorShape(part, spec.shape)
 end
 
+local function getFallbackPartName(specName: string): string
+    return string.format('%s_Fallback', specName)
+end
+
+local function clearAssetFallbackPart(parent: Instance, specName: string)
+    local fallback = parent:FindFirstChild(getFallbackPartName(specName))
+    if fallback then
+        fallback:Destroy()
+    end
+end
+
+local function ensureAssetFallbackPart(parent: Instance, spec: WorldDecorLogic.AssetDecorSpec)
+    local fallbackName = getFallbackPartName(spec.name)
+    local existing = parent:FindFirstChild(fallbackName)
+    local fallbackPart: Part
+
+    if existing and existing:IsA('Part') then
+        fallbackPart = existing
+    else
+        if existing then
+            existing:Destroy()
+        end
+
+        fallbackPart = Instance.new('Part')
+        fallbackPart.Name = fallbackName
+        fallbackPart.Parent = parent
+    end
+
+    local isGrassFallback = string.find(spec.name, 'Grass', 1, true) ~= nil
+    if isGrassFallback then
+        fallbackPart.Shape = Enum.PartType.Block
+        fallbackPart.Size = Vector3.new(10, 0.8, 10)
+        fallbackPart.Material = Enum.Material.Grass
+        fallbackPart.Color = Color3.fromRGB(97, 145, 86)
+        fallbackPart.CFrame = toCFrame(
+            { x = spec.position.x, y = spec.position.y + 0.4, z = spec.position.z },
+            spec.rotation
+        )
+    else
+        fallbackPart.Shape = Enum.PartType.Ball
+        fallbackPart.Size = Vector3.new(5.5, 4.5, 5.5)
+        fallbackPart.Material = Enum.Material.Slate
+        fallbackPart.Color = Color3.fromRGB(118, 113, 108)
+        fallbackPart.CFrame = toCFrame(
+            { x = spec.position.x, y = spec.position.y + 2.25, z = spec.position.z },
+            spec.rotation
+        )
+    end
+
+    fallbackPart.Anchored = true
+    fallbackPart.CanCollide = true
+end
+
 local function ensureAssetDecor(parent: Instance, spec: WorldDecorLogic.AssetDecorSpec)
     local existing = parent:FindFirstChild(spec.name)
     local target = existing
@@ -147,6 +248,7 @@ local function ensureAssetDecor(parent: Instance, spec: WorldDecorLogic.AssetDec
 
         local template = getAssetTemplate(spec.assetId)
         if not template then
+            ensureAssetFallbackPart(parent, spec)
             return
         end
 
@@ -164,12 +266,14 @@ local function ensureAssetDecor(parent: Instance, spec: WorldDecorLogic.AssetDec
 
         anchorModel(target)
         target:PivotTo(targetCFrame)
+        clearAssetFallbackPart(parent, spec.name)
         return
     end
 
     target.Anchored = true
     target.CanCollide = true
     target.CFrame = targetCFrame
+    clearAssetFallbackPart(parent, spec.name)
 end
 
 local function ensureWorldDecor()

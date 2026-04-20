@@ -8,7 +8,17 @@ This file is the source of truth for Roblox Creator Store assets currently refer
 | --- | --- | --- |
 | Realistic Trees | `3256343670` | `src/Shared/WorldDecorLogic.luau` (`RealisticTreeNorth`, `RealisticTreeNorthEast`, `RealisticTreeSouth`, `RealisticTreeWest`) |
 | Realistic bush flowers mesh | `9187138703` | `src/Shared/WorldDecorLogic.luau` (`FlowerBushCenterNorth`, `FlowerBushCenterSouth`, `FlowerBushEastHill`, `FlowerBushWestHill`) |
+| Rock | `4038061999` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsRock`) |
+| Light Grass | `2846635652` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsLightGrass`) |
+| Rock realistic | `9217425479` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsRockRealistic`) |
+| Rocks | `4453595550` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsRocks`) |
+| cozy rock | `13785580624` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsCozyRock`) |
+| Small Rocks | `1925262929` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsSmallRocks`) |
+| rake Cave | `16170402764` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsRakeCave`) |
 
 ## Maintenance rule
 
 When Creator Store assets are added, removed, or replaced in code, update this file in the same change.
+
+World loading supports both model-style assets (`InsertService:LoadAsset`) and mesh-style assets (`InsertService:CreateMeshPartAsync` with explicit collision/render fidelity) so mixed Creator Store IDs can still appear as decor.
+If a Creator Store asset cannot be fetched at runtime, world setup now places a deterministic anchored fallback part (`<DecorName>_Fallback`) at the same location so the zone still remains decorated.
