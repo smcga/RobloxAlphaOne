@@ -39,6 +39,13 @@ local WorldDecorLogic = {}
 
 local REALISTIC_TREES_ASSET_ID = 3256343670
 local REALISTIC_BUSH_FLOWERS_ASSET_ID = 9187138703
+local ROCK_ASSET_ID = 4038061999
+local LIGHT_GRASS_ASSET_ID = 2846635652
+local ROCK_REALISTIC_ASSET_ID = 9217425479
+local ROCKS_ASSET_ID = 4453595550
+local COZY_ROCK_ASSET_ID = 13785580624
+local SMALL_ROCKS_ASSET_ID = 1925262929
+local RAKE_CAVE_ASSET_ID = 16170402764
 
 local DECOR_SPECS: { DecorSpec } = {
     {
@@ -187,6 +194,62 @@ local DECOR_SPECS: { DecorSpec } = {
         position = { x = -33, y = 0, z = -16 },
         rotation = { x = 0, y = 118, z = 0 },
         scale = 0.9,
+    },
+    {
+        kind = 'Asset',
+        name = 'AgeOfBeadsRock',
+        assetId = ROCK_ASSET_ID,
+        position = { x = -342, y = 0, z = -49 },
+        rotation = { x = 0, y = -12, z = 0 },
+        scale = 1,
+    },
+    {
+        kind = 'Asset',
+        name = 'AgeOfBeadsLightGrass',
+        assetId = LIGHT_GRASS_ASSET_ID,
+        position = { x = -319, y = 0, z = -72 },
+        rotation = { x = 0, y = 44, z = 0 },
+        scale = 1.3,
+    },
+    {
+        kind = 'Asset',
+        name = 'AgeOfBeadsRockRealistic',
+        assetId = ROCK_REALISTIC_ASSET_ID,
+        position = { x = -315, y = 0, z = -45 },
+        rotation = { x = 0, y = 90, z = 0 },
+        scale = 0.95,
+    },
+    {
+        kind = 'Asset',
+        name = 'AgeOfBeadsRocks',
+        assetId = ROCKS_ASSET_ID,
+        position = { x = -349, y = 0, z = -69 },
+        rotation = { x = 0, y = 32, z = 0 },
+        scale = 1.05,
+    },
+    {
+        kind = 'Asset',
+        name = 'AgeOfBeadsCozyRock',
+        assetId = COZY_ROCK_ASSET_ID,
+        position = { x = -333, y = 0, z = -82 },
+        rotation = { x = 0, y = -66, z = 0 },
+        scale = 1,
+    },
+    {
+        kind = 'Asset',
+        name = 'AgeOfBeadsSmallRocks',
+        assetId = SMALL_ROCKS_ASSET_ID,
+        position = { x = -345, y = 0, z = -82 },
+        rotation = { x = 0, y = 14, z = 0 },
+        scale = 1.2,
+    },
+    {
+        kind = 'Asset',
+        name = 'AgeOfBeadsRakeCave',
+        assetId = RAKE_CAVE_ASSET_ID,
+        position = { x = -322, y = 0, z = -38 },
+        rotation = { x = 0, y = 166, z = 0 },
+        scale = 1,
     },
 }
 

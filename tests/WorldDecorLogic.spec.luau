@@ -1,8 +1,17 @@
 local WorldDecorLogic = require('../src/Shared/WorldDecorLogic')
 
 local FLOOR_Y = -0.5
+local BASEPLATE_HALF_X = 920 / 2
+local BASEPLATE_HALF_Z = 420 / 2
 local REALISTIC_TREES_ASSET_ID = 3256343670
 local REALISTIC_BUSH_FLOWERS_ASSET_ID = 9187138703
+local ROCK_ASSET_ID = 4038061999
+local LIGHT_GRASS_ASSET_ID = 2846635652
+local ROCK_REALISTIC_ASSET_ID = 9217425479
+local ROCKS_ASSET_ID = 4453595550
+local COZY_ROCK_ASSET_ID = 13785580624
+local SMALL_ROCKS_ASSET_ID = 1925262929
+local RAKE_CAVE_ASSET_ID = 16170402764
 
 local function expectEqual<T>(actual: T, expected: T, message: string)
     if actual ~= expected then
@@ -36,12 +45,13 @@ end
 
 runCase('decor specs include stable scene pieces', function()
     local specs = WorldDecorLogic.getDecorSpecs()
-    expectEqual(#specs, 17, 'scene should include the expected number of decor entries')
+    expectEqual(#specs, 24, 'scene should include the expected number of decor entries')
 
     local foundMainPath = false
     local foundRockCluster = false
     local foundAssetTree = false
     local foundFlowerBush = false
+    local foundAgeOfBeadsDecor = false
 
     for _, spec in specs do
         if spec.name == 'MainPath' then
@@ -59,12 +69,17 @@ runCase('decor specs include stable scene pieces', function()
         if spec.name == 'FlowerBushCenterNorth' then
             foundFlowerBush = true
         end
+
+        if spec.name == 'AgeOfBeadsRock' then
+            foundAgeOfBeadsDecor = true
+        end
     end
 
     expectTruthy(foundMainPath, 'main path decor should exist')
     expectTruthy(foundRockCluster, 'rock cluster decor should exist')
     expectTruthy(foundAssetTree, 'asset tree decor should exist')
     expectTruthy(foundFlowerBush, 'flower bush decor should exist')
+    expectTruthy(foundAgeOfBeadsDecor, 'age of beads decor should exist')
 end)
 
 runCase('asset entries keep a deterministic unique asset-id set', function()
@@ -82,12 +97,19 @@ runCase('asset entries keep a deterministic unique asset-id set', function()
         idCount += 1
     end
 
-    expectEqual(idCount, 2, 'expected two unique creator store asset ids in world decor')
+    expectEqual(idCount, 9, 'expected nine unique creator store asset ids in world decor')
     expectTruthy(uniqueIds[REALISTIC_TREES_ASSET_ID], 'expected realistic trees id in unique set')
     expectTruthy(
         uniqueIds[REALISTIC_BUSH_FLOWERS_ASSET_ID],
         'expected realistic bush flowers id in unique set'
     )
+    expectTruthy(uniqueIds[ROCK_ASSET_ID], 'expected rock id in unique set')
+    expectTruthy(uniqueIds[LIGHT_GRASS_ASSET_ID], 'expected light grass id in unique set')
+    expectTruthy(uniqueIds[ROCK_REALISTIC_ASSET_ID], 'expected rock realistic id in unique set')
+    expectTruthy(uniqueIds[ROCKS_ASSET_ID], 'expected rocks id in unique set')
+    expectTruthy(uniqueIds[COZY_ROCK_ASSET_ID], 'expected cozy rock id in unique set')
+    expectTruthy(uniqueIds[SMALL_ROCKS_ASSET_ID], 'expected small rocks id in unique set')
+    expectTruthy(uniqueIds[RAKE_CAVE_ASSET_ID], 'expected rake cave id in unique set')
 end)
 
 runCase('realistic tree entries use creator store asset id', function()
@@ -128,6 +150,41 @@ runCase('flower bush entries use creator store asset id', function()
     expectEqual(foundAssetCount, 4, 'expected exactly four flower bush asset placements')
 end)
 
+runCase('age of beads creator-store decor entries use requested asset ids', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+    local expectedIdsByName = {
+        AgeOfBeadsRock = ROCK_ASSET_ID,
+        AgeOfBeadsLightGrass = LIGHT_GRASS_ASSET_ID,
+        AgeOfBeadsRockRealistic = ROCK_REALISTIC_ASSET_ID,
+        AgeOfBeadsRocks = ROCKS_ASSET_ID,
+        AgeOfBeadsCozyRock = COZY_ROCK_ASSET_ID,
+        AgeOfBeadsSmallRocks = SMALL_ROCKS_ASSET_ID,
+        AgeOfBeadsRakeCave = RAKE_CAVE_ASSET_ID,
+    }
+
+    for decorName, expectedAssetId in expectedIdsByName do
+        local foundSpec = nil
+
+        for _, spec in specs do
+            if spec.kind == 'Asset' and spec.name == decorName then
+                foundSpec = spec
+                break
+            end
+        end
+
+        expectTruthy(foundSpec, string.format('missing decor spec for %s', decorName))
+        expectEqual(
+            foundSpec.assetId,
+            expectedAssetId,
+            string.format('%s should use expected asset id', decorName)
+        )
+        expectTruthy(
+            foundSpec.scale ~= nil and foundSpec.scale > 0,
+            'asset entry should define scale'
+        )
+    end
+end)
+
 runCase('critical cylinder props are rotated into their intended orientation', function()
     local specs = WorldDecorLogic.getDecorSpecs()
     local expectedRotations = {
@@ -158,8 +215,10 @@ runCase('decor specs stay near the base playable area', function()
     local specs = WorldDecorLogic.getDecorSpecs()
 
     for _, spec in specs do
-        local horizontalDistance = math.max(math.abs(spec.position.x), math.abs(spec.position.z))
-        if horizontalDistance > 64 then
+        if
+            math.abs(spec.position.x) > BASEPLATE_HALF_X
+            or math.abs(spec.position.z) > BASEPLATE_HALF_Z
+        then
             error(string.format('decor %s is outside the baseplate bounds', spec.name))
         end
     end
