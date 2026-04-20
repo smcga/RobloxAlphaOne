@@ -93,7 +93,11 @@ end
 
 local function getMeshPartTemplate(assetId: number): MeshPart?
     local ok, meshPart = pcall(function()
-        return InsertService:CreateMeshPartAsync(string.format('rbxassetid://%d', assetId))
+        return InsertService:CreateMeshPartAsync(
+            string.format('rbxassetid://%d', assetId),
+            Enum.CollisionFidelity.Default,
+            Enum.RenderFidelity.Automatic
+        )
     end)
 
     if not ok or meshPart == nil then

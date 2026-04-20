@@ -188,6 +188,23 @@ runCase('age of beads creator-store decor entries use requested asset ids', func
     end
 end)
 
+runCase('age of beads creator-store asset ids are positive integers', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+
+    for _, spec in specs do
+        if spec.kind == 'Asset' and string.sub(spec.name, 1, 10) == 'AgeOfBeads' then
+            if spec.assetId <= 0 or spec.assetId % 1 ~= 0 then
+                error(
+                    string.format(
+                        'age-of-beads asset id for %s should be a positive integer',
+                        spec.name
+                    )
+                )
+            end
+        end
+    end
+end)
+
 runCase('age of beads creator-store decor stays near the age zone center', function()
     local specs = WorldDecorLogic.getDecorSpecs()
     local ageOfBeadsAssetCount = 0
