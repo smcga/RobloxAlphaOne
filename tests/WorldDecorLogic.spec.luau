@@ -60,6 +60,25 @@ runCase('decor specs include stable scene pieces', function()
     expectTruthy(foundAssetTree, 'asset tree decor should exist')
 end)
 
+runCase('asset entries keep a deterministic unique asset-id set', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+    local uniqueIds: { [number]: boolean } = {}
+
+    for _, spec in specs do
+        if spec.kind == 'Asset' then
+            uniqueIds[spec.assetId] = true
+        end
+    end
+
+    local idCount = 0
+    for _ in uniqueIds do
+        idCount += 1
+    end
+
+    expectEqual(idCount, 1, 'expected one unique creator store asset id in world decor')
+    expectTruthy(uniqueIds[REALISTIC_TREES_ASSET_ID], 'expected realistic trees id in unique set')
+end)
+
 runCase('realistic tree entries use creator store asset id', function()
     local specs = WorldDecorLogic.getDecorSpecs()
     local foundAssetCount = 0
