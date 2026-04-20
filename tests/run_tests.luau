@@ -1,4 +1,5 @@
 require('./ProfileDataLogic.spec')
+require('./AdminLogic.spec')
 require('./ScoreLogic.spec')
 require('./NumberFormat.spec')
 require('./ZoneLogic.spec')
