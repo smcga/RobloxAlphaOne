@@ -34,10 +34,12 @@ end
 
 runCase('decor specs include stable scene pieces', function()
     local specs = WorldDecorLogic.getDecorSpecs()
-    expectEqual(#specs, 11, 'scene should include the expected number of decor parts')
+    expectEqual(#specs, 21, 'scene should include the expected number of decor parts')
 
     local foundMainPath = false
     local foundTreeLeaves = false
+    local foundRockCluster = false
+    local foundFlowerPatch = false
 
     for _, spec in specs do
         if spec.name == 'MainPath' then
@@ -47,10 +49,20 @@ runCase('decor specs include stable scene pieces', function()
         if spec.name == 'NorthTreeLeaves' then
             foundTreeLeaves = true
         end
+
+        if spec.name == 'NorthRockCluster' then
+            foundRockCluster = true
+        end
+
+        if spec.name == 'SouthFlowerPatch' then
+            foundFlowerPatch = true
+        end
     end
 
     expectTruthy(foundMainPath, 'main path decor should exist')
     expectTruthy(foundTreeLeaves, 'tree leaves decor should exist')
+    expectTruthy(foundRockCluster, 'rock cluster decor should exist')
+    expectTruthy(foundFlowerPatch, 'flower patch decor should exist')
 end)
 
 runCase('critical cylinder props are rotated into their intended orientation', function()
@@ -59,6 +71,10 @@ runCase('critical cylinder props are rotated into their intended orientation', f
         CenterPad = 90,
         NorthTree = 90,
         SouthTree = 90,
+        PineNorthTrunk = 90,
+        PineSouthTrunk = 90,
+        NorthFlowerPatch = 90,
+        SouthFlowerPatch = 90,
     }
 
     for decorName, expectedZRotation in expectedRotations do
