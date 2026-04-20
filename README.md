@@ -8,6 +8,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Shows `Score: 0` UI on join/spawn.
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
 - Shows `Rebirths: 0` UI under score on join/spawn.
+- Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
 - Shows an owner-only admin panel with buttons to multiply current score by `2x` or `10x`.
 - Increments score by exactly `+1` per second while inside the blue zone (based on horizontal position in the circle).
 - Applies a rebirth multiplier to score gain (`max(Rebirths, 1)`), so `2` rebirths means `2x` score/sec.
@@ -93,6 +94,7 @@ Keep this terminal running while you work.
 5. Verify expected MVP behavior:
    - A `Baseplate`, blue `ScoreZone`, red `HighScoreZone`, orange `1700'sZone`, and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
+   - Whenever score increases, you see a brief floating popup with the compact increase amount (example: `+1.6k`) at a random position.
    - Standing inside the blue zone adds exactly `+1` score per second.
    - Score gain scales with rebirths (example: `2` rebirths => `+2`/sec in blue zone).
    - At `100+` score, standing in the red zone adds exactly `+50` score per second.
