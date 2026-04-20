@@ -205,6 +205,21 @@ runCase('age of beads creator-store asset ids are positive integers', function()
     end
 end)
 
+runCase('age of beads creator-store entries include one grass-named asset', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+    local grassNamedCount = 0
+
+    for _, spec in specs do
+        if spec.kind == 'Asset' and string.sub(spec.name, 1, 10) == 'AgeOfBeads' then
+            if string.find(spec.name, 'Grass', 1, true) ~= nil then
+                grassNamedCount += 1
+            end
+        end
+    end
+
+    expectEqual(grassNamedCount, 1, 'expected one grass-named age-of-beads asset entry')
+end)
+
 runCase('age of beads creator-store decor stays near the age zone center', function()
     local specs = WorldDecorLogic.getDecorSpecs()
     local ageOfBeadsAssetCount = 0

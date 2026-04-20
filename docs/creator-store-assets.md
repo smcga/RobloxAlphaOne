@@ -21,3 +21,4 @@ This file is the source of truth for Roblox Creator Store assets currently refer
 When Creator Store assets are added, removed, or replaced in code, update this file in the same change.
 
 World loading supports both model-style assets (`InsertService:LoadAsset`) and mesh-style assets (`InsertService:CreateMeshPartAsync` with explicit collision/render fidelity) so mixed Creator Store IDs can still appear as decor.
+If a Creator Store asset cannot be fetched at runtime, world setup now places a deterministic anchored fallback part (`<DecorName>_Fallback`) at the same location so the zone still remains decorated.
