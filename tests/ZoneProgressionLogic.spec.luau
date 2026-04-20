@@ -26,11 +26,14 @@ local function tick(state, overrides)
         deltaSeconds = 1,
         isInsideBlueZone = false,
         isInsideRedZone = false,
+        isInsideEighteenHundredsZone = false,
         isInsideRebirthZone = false,
         scoreIntervalSeconds = 1,
         blueIncrement = 1,
         redIncrement = 50,
         redRequiredScore = 100,
+        eighteenHundredsIncrement = 500,
+        eighteenHundredsRequiredScore = 50000000,
         rebirthScoreDivisor = 1000,
     }
 
@@ -114,4 +117,20 @@ runCase('reaching requirement in blue zone unlocks red zone immediately', functi
         false,
         'player should not be punished once requirement is met in the same tick'
     )
+end)
+
+runCase("1700's zone increments by 500 when requirement is met", function()
+    local result = tick(ZoneProgressionLogic.newState(50000000), {
+        isInsideEighteenHundredsZone = true,
+    })
+
+    expectEqual(result.state.score, 50000500, "1700's zone should increment score by five hundred")
+end)
+
+runCase("1700's zone does not increment before requirement is met", function()
+    local result = tick(ZoneProgressionLogic.newState(49999999), {
+        isInsideEighteenHundredsZone = true,
+    })
+
+    expectEqual(result.state.score, 49999999, "1700's zone should stay locked below requirement")
 end)
