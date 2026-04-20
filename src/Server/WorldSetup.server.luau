@@ -65,8 +65,26 @@ local ASSET_TEMPLATE_CACHE: { [number]: Instance } = {}
 
 local function getFirstPlaceableChild(container: Instance): Instance?
     for _, child in container:GetChildren() do
-        if child:IsA('Model') or child:IsA('BasePart') then
+        if child:IsA('Model') then
             return child
+        end
+    end
+
+    for _, descendant in container:GetDescendants() do
+        if descendant:IsA('Model') then
+            return descendant
+        end
+    end
+
+    for _, child in container:GetChildren() do
+        if child:IsA('BasePart') then
+            return child
+        end
+    end
+
+    for _, descendant in container:GetDescendants() do
+        if descendant:IsA('BasePart') then
+            return descendant
         end
     end
 

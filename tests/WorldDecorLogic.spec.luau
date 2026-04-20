@@ -3,6 +3,9 @@ local WorldDecorLogic = require('../src/Shared/WorldDecorLogic')
 local FLOOR_Y = -0.5
 local BASEPLATE_HALF_X = 920 / 2
 local BASEPLATE_HALF_Z = 420 / 2
+local AGE_OF_BEADS_ZONE_CENTER_X = -330
+local AGE_OF_BEADS_ZONE_CENTER_Z = -60
+local AGE_OF_BEADS_DECOR_MAX_DISTANCE = 30
 local REALISTIC_TREES_ASSET_ID = 3256343670
 local REALISTIC_BUSH_FLOWERS_ASSET_ID = 9187138703
 local ROCK_ASSET_ID = 4038061999
@@ -182,6 +185,22 @@ runCase('age of beads creator-store decor entries use requested asset ids', func
             foundSpec.scale ~= nil and foundSpec.scale > 0,
             'asset entry should define scale'
         )
+    end
+end)
+
+runCase('age of beads creator-store decor stays near the age zone center', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+
+    for _, spec in specs do
+        if spec.kind == 'Asset' and string.sub(spec.name, 1, 10) == 'AgeOfBeads' then
+            local xDistance = math.abs(spec.position.x - AGE_OF_BEADS_ZONE_CENTER_X)
+            local zDistance = math.abs(spec.position.z - AGE_OF_BEADS_ZONE_CENTER_Z)
+            local maxAxisDistance = math.max(xDistance, zDistance)
+
+            if maxAxisDistance > AGE_OF_BEADS_DECOR_MAX_DISTANCE then
+                error(string.format('age-of-beads decor %s is too far from zone center', spec.name))
+            end
+        end
     end
 end)
 
