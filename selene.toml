@@ -1,5 +1,9 @@
 std = "roblox"
-lints = { unused_variable = "warn", shadowing = "allow" }
+
+[lints]
+unused_variable = "warn"
+shadowing = "allow"
+incorrect_standard_library_use = "allow"
 
 [config]
 empty_if = { comments_count = true }

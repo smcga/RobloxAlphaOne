@@ -50,3 +50,10 @@ runCase('sub-second ticks while inside zone carry over across updates', function
     state = ScoreLogic.tick(state, 0.7, true, 1, 1)
     expectEqual(state.score, 1, 'fractional elapsed time should accumulate between ticks')
 end)
+
+runCase('accumulator remainder is preserved after full interval scoring', function()
+    local state = ScoreLogic.newState(10)
+    state = ScoreLogic.tick(state, 2.25, true, 1, 2)
+    expectEqual(state.score, 14, 'two full intervals should apply increment twice')
+    expectEqual(state.accumulatorSeconds, 0.25, 'remainder should be retained for next tick')
+end)

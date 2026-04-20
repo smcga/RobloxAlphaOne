@@ -109,6 +109,25 @@ For normal development sessions:
    - `mise exec -- rojo build default.project.json --output build.rbxlx`
 4. Commit once all checks pass.
 
+
+## Agent-friendly environment bootstrap
+To help coding agents (for example, Codex) and humans share the same setup flow, this repo includes:
+
+- Script: `./scripts/setup_env.sh`
+- Documentation: `docs/agent-environment-setup.md`
+
+Quick start:
+
+```bash
+./scripts/setup_env.sh
+```
+
+Or run bootstrap plus validation checks:
+
+```bash
+./scripts/setup_env.sh --with-checks
+```
+
 ## Local commands
 ```bash
 # Format all Luau files
@@ -132,17 +151,16 @@ mise exec -- rojo serve default.project.json
 
 ## Tooling choices
 - **Tests:** Uses a lightweight deterministic `lune`-run unit test script for pure logic (`src/Shared/ScoreLogic.luau`, `src/Shared/ZoneProgressionLogic.luau`). This avoids brittle engine simulation while still providing CI coverage for scoring rules.
-- **Validation:** Luau type annotations are used in source modules. Selene provides practical static linting. Full engine-level typecheck in CI is intentionally not over-engineered here.
+- **Validation:** Luau type annotations are used in source modules. Selene provides practical static linting; this repo intentionally allows `incorrect_standard_library_use` because filesystem/Lune tests use string-based `require` paths that differ from strict Roblox runtime usage. Full engine-level typecheck in CI is intentionally not over-engineered here.
 
 ## CI
 GitHub Actions workflow `.github/workflows/ci.yml` runs on push and pull request:
 1. checkout
-2. install mise-en-place and pinned tools
-3. install Wally dependencies
-4. format check
-5. lint
-6. tests
-7. Rojo build validation
+2. bootstrap environment with `./scripts/setup_env.sh` (mise trust/install + Wally install)
+3. format check
+4. lint
+5. tests
+6. Rojo build validation
 
 ## CD scaffold (manual/safe by default)
 `.github/workflows/deploy.yml` is a `workflow_dispatch` placeholder scaffold.
