@@ -1,13 +1,16 @@
 local Players = game:GetService('Players')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local TweenService = game:GetService('TweenService')
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild('PlayerGui')
+local camera = workspace.CurrentCamera
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
-local Remotes = require(Shared:WaitForChild('Remotes'))
-local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
 local Constants = require(Shared:WaitForChild('Constants'))
+local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
+local Remotes = require(Shared:WaitForChild('Remotes'))
+local ScorePopupLogic = require(Shared:WaitForChild('ScorePopupLogic'))
 
 local screenGui = Instance.new('ScreenGui')
 screenGui.Name = 'ScoreGui'
@@ -40,6 +43,53 @@ rebirthsLabel.Parent = screenGui
 local function setScoreAndRebirths(score: number, rebirths: number)
     scoreLabel.Text = string.format('Score: %s', NumberFormat.formatCompact(score))
     rebirthsLabel.Text = string.format('Rebirths: %s', NumberFormat.formatCompact(rebirths))
+end
+
+local POPUP_WIDTH = 160
+local POPUP_HEIGHT = 60
+
+local function showScoreIncreasePopup(increase: number)
+    local popup = Instance.new('TextLabel')
+    popup.Name = 'ScoreIncreasePopup'
+    popup.Size = UDim2.fromOffset(POPUP_WIDTH, POPUP_HEIGHT)
+    popup.AnchorPoint = Vector2.new(0, 0)
+    popup.BackgroundTransparency = 1
+    popup.TextColor3 = Color3.fromRGB(120, 255, 120)
+    popup.TextStrokeTransparency = 0.25
+    popup.TextScaled = true
+    popup.Font = Enum.Font.GothamBlack
+    popup.Text = ScorePopupLogic.formatIncreaseText(increase, NumberFormat.formatCompact)
+
+    local viewportSize = camera and camera.ViewportSize or Vector2.new(1280, 720)
+    local randomX = math.random()
+    local randomY = math.random()
+    local x, y = ScorePopupLogic.getRandomPopupPosition(
+        viewportSize.X,
+        viewportSize.Y,
+        POPUP_WIDTH,
+        POPUP_HEIGHT,
+        randomX,
+        randomY
+    )
+
+    popup.Position = UDim2.fromOffset(x, y)
+    popup.Parent = screenGui
+
+    local floatTween = TweenService:Create(
+        popup,
+        TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {
+            Position = UDim2.fromOffset(x, y - 42),
+            TextTransparency = 1,
+            TextStrokeTransparency = 1,
+        }
+    )
+
+    floatTween.Completed:Connect(function()
+        popup:Destroy()
+    end)
+
+    floatTween:Play()
 end
 
 local scoreUpdatedEvent = Remotes.waitForScoreUpdatedEvent()
@@ -96,7 +146,15 @@ for index, multiplier in ipairs(Constants.ADMIN_SCORE_MULTIPLIERS) do
     createMultiplierButton(multiplier, index)
 end
 
+local previousScore: number? = nil
+
 scoreUpdatedEvent.OnClientEvent:Connect(function(score: number, rebirths: number)
+    local increase = ScorePopupLogic.getPositiveIncrease(previousScore, score)
+    if increase then
+        showScoreIncreasePopup(increase)
+    end
+
+    previousScore = score
     setScoreAndRebirths(score, rebirths)
 end)
 
