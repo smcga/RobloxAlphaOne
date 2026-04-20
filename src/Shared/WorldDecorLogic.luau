@@ -38,6 +38,7 @@ export type DecorSpec = PartDecorSpec | AssetDecorSpec
 local WorldDecorLogic = {}
 
 local REALISTIC_TREES_ASSET_ID = 3256343670
+local REALISTIC_BUSH_FLOWERS_ASSET_ID = 9187138703
 
 local DECOR_SPECS: { DecorSpec } = {
     {
@@ -154,6 +155,38 @@ local DECOR_SPECS: { DecorSpec } = {
         position = { x = -40, y = 0, z = -10 },
         rotation = { x = 0, y = -75, z = 0 },
         scale = 0.32,
+    },
+    {
+        kind = 'Asset',
+        name = 'FlowerBushCenterNorth',
+        assetId = REALISTIC_BUSH_FLOWERS_ASSET_ID,
+        position = { x = 10, y = 0, z = -6 },
+        rotation = { x = 0, y = 22, z = 0 },
+        scale = 1.1,
+    },
+    {
+        kind = 'Asset',
+        name = 'FlowerBushCenterSouth',
+        assetId = REALISTIC_BUSH_FLOWERS_ASSET_ID,
+        position = { x = -9, y = 0, z = 8 },
+        rotation = { x = 0, y = -35, z = 0 },
+        scale = 1,
+    },
+    {
+        kind = 'Asset',
+        name = 'FlowerBushEastHill',
+        assetId = REALISTIC_BUSH_FLOWERS_ASSET_ID,
+        position = { x = 33, y = 0, z = 14 },
+        rotation = { x = 0, y = 64, z = 0 },
+        scale = 0.95,
+    },
+    {
+        kind = 'Asset',
+        name = 'FlowerBushWestHill',
+        assetId = REALISTIC_BUSH_FLOWERS_ASSET_ID,
+        position = { x = -33, y = 0, z = -16 },
+        rotation = { x = 0, y = 118, z = 0 },
+        scale = 0.9,
     },
 }
 

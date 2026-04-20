@@ -2,6 +2,7 @@ local WorldDecorLogic = require('../src/Shared/WorldDecorLogic')
 
 local FLOOR_Y = -0.5
 local REALISTIC_TREES_ASSET_ID = 3256343670
+local REALISTIC_BUSH_FLOWERS_ASSET_ID = 9187138703
 
 local function expectEqual<T>(actual: T, expected: T, message: string)
     if actual ~= expected then
@@ -35,11 +36,12 @@ end
 
 runCase('decor specs include stable scene pieces', function()
     local specs = WorldDecorLogic.getDecorSpecs()
-    expectEqual(#specs, 13, 'scene should include the expected number of decor entries')
+    expectEqual(#specs, 17, 'scene should include the expected number of decor entries')
 
     local foundMainPath = false
     local foundRockCluster = false
     local foundAssetTree = false
+    local foundFlowerBush = false
 
     for _, spec in specs do
         if spec.name == 'MainPath' then
@@ -53,11 +55,16 @@ runCase('decor specs include stable scene pieces', function()
         if spec.name == 'RealisticTreeNorth' then
             foundAssetTree = true
         end
+
+        if spec.name == 'FlowerBushCenterNorth' then
+            foundFlowerBush = true
+        end
     end
 
     expectTruthy(foundMainPath, 'main path decor should exist')
     expectTruthy(foundRockCluster, 'rock cluster decor should exist')
     expectTruthy(foundAssetTree, 'asset tree decor should exist')
+    expectTruthy(foundFlowerBush, 'flower bush decor should exist')
 end)
 
 runCase('asset entries keep a deterministic unique asset-id set', function()
@@ -75,8 +82,12 @@ runCase('asset entries keep a deterministic unique asset-id set', function()
         idCount += 1
     end
 
-    expectEqual(idCount, 1, 'expected one unique creator store asset id in world decor')
+    expectEqual(idCount, 2, 'expected two unique creator store asset ids in world decor')
     expectTruthy(uniqueIds[REALISTIC_TREES_ASSET_ID], 'expected realistic trees id in unique set')
+    expectTruthy(
+        uniqueIds[REALISTIC_BUSH_FLOWERS_ASSET_ID],
+        'expected realistic bush flowers id in unique set'
+    )
 end)
 
 runCase('realistic tree entries use creator store asset id', function()
@@ -84,7 +95,7 @@ runCase('realistic tree entries use creator store asset id', function()
     local foundAssetCount = 0
 
     for _, spec in specs do
-        if spec.kind == 'Asset' then
+        if spec.kind == 'Asset' and string.sub(spec.name, 1, 13) == 'RealisticTree' then
             foundAssetCount += 1
             expectEqual(
                 spec.assetId,
@@ -96,6 +107,25 @@ runCase('realistic tree entries use creator store asset id', function()
     end
 
     expectEqual(foundAssetCount, 4, 'expected exactly four realistic tree asset placements')
+end)
+
+runCase('flower bush entries use creator store asset id', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+    local foundAssetCount = 0
+
+    for _, spec in specs do
+        if spec.kind == 'Asset' and string.sub(spec.name, 1, 10) == 'FlowerBush' then
+            foundAssetCount += 1
+            expectEqual(
+                spec.assetId,
+                REALISTIC_BUSH_FLOWERS_ASSET_ID,
+                string.format('%s should use expected asset id', spec.name)
+            )
+            expectTruthy(spec.scale ~= nil and spec.scale > 0, 'asset entry should define a scale')
+        end
+    end
+
+    expectEqual(foundAssetCount, 4, 'expected exactly four flower bush asset placements')
 end)
 
 runCase('critical cylinder props are rotated into their intended orientation', function()
