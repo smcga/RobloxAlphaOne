@@ -5,6 +5,9 @@ local Constants = {
     RED_ZONE_REQUIRED_SCORE = 100,
     REBIRTH_SCORE_DIVISOR = 10,
 
+    SCORE_DATASTORE_NAME = 'PlayerScoreDataV1',
+    SCORE_AUTOSAVE_INTERVAL_SECONDS = 30,
+
     BLUE_ZONE_NAME = 'ScoreZone',
     BLUE_ZONE_CENTER = Vector3.new(0, 1, 0),
     BLUE_ZONE_RADIUS = 14,

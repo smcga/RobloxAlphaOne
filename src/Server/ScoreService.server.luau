@@ -1,9 +1,11 @@
+local DataStoreService = game:GetService('DataStoreService')
 local Players = game:GetService('Players')
 local RunService = game:GetService('RunService')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
+local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
 local ZoneProgressionLogic = require(Shared:WaitForChild('ZoneProgressionLogic'))
@@ -12,10 +14,18 @@ type ZoneProgressionState = ZoneProgressionLogic.ZoneProgressionState
 
 type PlayerScoreState = {
     progressionState: ZoneProgressionState,
+    dirtyVersion: number,
+    lastSavedVersion: number,
+    lastSaveClock: number,
 }
 
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
 local playerStates: { [Player]: PlayerScoreState } = {}
+local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
+
+local function getPlayerDataStoreKey(player: Player): string
+    return string.format('player_%s', tostring(player.UserId))
+end
 
 local function getHumanoidRootPart(player: Player): BasePart?
     local character = player.Character
@@ -49,12 +59,98 @@ local function pushScore(player: Player, score: number, rebirths: number)
     scoreUpdatedEvent:FireClient(player, score, rebirths)
 end
 
-local function resetPlayerState(player: Player)
-    playerStates[player] = {
-        progressionState = ZoneProgressionLogic.newState(0),
+local function createPlayerState(score: number, rebirths: number): PlayerScoreState
+    return {
+        progressionState = ZoneProgressionLogic.newState(score, rebirths),
+        dirtyVersion = 0,
+        lastSavedVersion = 0,
+        lastSaveClock = os.clock(),
+    }
+end
+
+local function loadPlayerState(player: Player): PlayerScoreState
+    local playerData = {
+        score = 0,
+        rebirths = 0,
     }
 
-    pushScore(player, 0, 0)
+    local success, result = pcall(function()
+        return scoreStore:GetAsync(getPlayerDataStoreKey(player))
+    end)
+
+    if success then
+        playerData = ProfileDataLogic.normalize(result)
+    else
+        warn(string.format('Failed to load score data for %s: %s', player.Name, tostring(result)))
+    end
+
+    return createPlayerState(playerData.score, playerData.rebirths)
+end
+
+local function savePlayerState(player: Player, force: boolean)
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    if state.dirtyVersion <= state.lastSavedVersion then
+        return
+    end
+
+    local now = os.clock()
+    if not force and now - state.lastSaveClock < Constants.SCORE_AUTOSAVE_INTERVAL_SECONDS then
+        return
+    end
+
+    local captureVersion = state.dirtyVersion
+    local scoreToSave = state.progressionState.score
+    local rebirthsToSave = state.progressionState.rebirths
+
+    state.lastSaveClock = now
+
+    task.spawn(function()
+        local success, err = pcall(function()
+            scoreStore:SetAsync(
+                getPlayerDataStoreKey(player),
+                ProfileDataLogic.toStoredValue({
+                    score = scoreToSave,
+                    rebirths = rebirthsToSave,
+                })
+            )
+        end)
+
+        if not success then
+            warn(string.format('Failed to save score data for %s: %s', player.Name, tostring(err)))
+            return
+        end
+
+        local latestState = playerStates[player]
+        if latestState and latestState.lastSavedVersion < captureVersion then
+            latestState.lastSavedVersion = captureVersion
+        end
+    end)
+end
+
+local function markDirty(state: PlayerScoreState)
+    state.dirtyVersion += 1
+end
+
+local function initializePlayerState(player: Player)
+    local state = loadPlayerState(player)
+    playerStates[player] = state
+
+    pushScore(player, state.progressionState.score, state.progressionState.rebirths)
+
+    player.CharacterAdded:Connect(function()
+        local currentState = playerStates[player]
+        if currentState then
+            pushScore(
+                player,
+                currentState.progressionState.score,
+                currentState.progressionState.rebirths
+            )
+        end
+    end)
 end
 
 local function punishForRedZone(player: Player, rootPart: BasePart)
@@ -81,23 +177,24 @@ local function punishForRedZone(player: Player, rootPart: BasePart)
 end
 
 Players.PlayerAdded:Connect(function(player)
-    resetPlayerState(player)
-
-    player.CharacterAdded:Connect(function()
-        resetPlayerState(player)
-    end)
+    initializePlayerState(player)
 end)
 
 for _, player in Players:GetPlayers() do
-    resetPlayerState(player)
-
-    player.CharacterAdded:Connect(function()
-        resetPlayerState(player)
-    end)
+    initializePlayerState(player)
 end
 
 Players.PlayerRemoving:Connect(function(player)
+    savePlayerState(player, true)
     playerStates[player] = nil
+end)
+
+game:BindToClose(function()
+    for player in pairs(playerStates) do
+        savePlayerState(player, true)
+    end
+
+    task.wait(2)
 end)
 
 RunService.Heartbeat:Connect(function(deltaSeconds: number)
@@ -146,6 +243,8 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             or tickResult.state.rebirths ~= state.progressionState.rebirths
         then
             pushScore(player, tickResult.state.score, tickResult.state.rebirths)
+            markDirty(state)
+            savePlayerState(player, false)
         end
 
         state.progressionState = tickResult.state
