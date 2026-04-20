@@ -14,14 +14,8 @@ jobs:
       - name: Setup mise
         uses: jdx/mise-action@v2
 
-      - name: Trust mise config
-        run: mise trust
-
-      - name: Install toolchain
-        run: mise install
-
-      - name: Install Wally dependencies
-        run: mise exec -- wally install
+      - name: Bootstrap environment
+        run: ./scripts/setup_env.sh
 
       - name: Check formatting
         run: mise exec -- stylua --check .

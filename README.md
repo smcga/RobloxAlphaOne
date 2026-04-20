@@ -109,6 +109,25 @@ For normal development sessions:
    - `mise exec -- rojo build default.project.json --output build.rbxlx`
 4. Commit once all checks pass.
 
+
+## Agent-friendly environment bootstrap
+To help coding agents (for example, Codex) and humans share the same setup flow, this repo includes:
+
+- Script: `./scripts/setup_env.sh`
+- Documentation: `docs/agent-environment-setup.md`
+
+Quick start:
+
+```bash
+./scripts/setup_env.sh
+```
+
+Or run bootstrap plus validation checks:
+
+```bash
+./scripts/setup_env.sh --with-checks
+```
+
 ## Local commands
 ```bash
 # Format all Luau files
@@ -137,12 +156,11 @@ mise exec -- rojo serve default.project.json
 ## CI
 GitHub Actions workflow `.github/workflows/ci.yml` runs on push and pull request:
 1. checkout
-2. install mise-en-place and pinned tools
-3. install Wally dependencies
-4. format check
-5. lint
-6. tests
-7. Rojo build validation
+2. bootstrap environment with `./scripts/setup_env.sh` (mise trust/install + Wally install)
+3. format check
+4. lint
+5. tests
+6. Rojo build validation
 
 ## CD scaffold (manual/safe by default)
 `.github/workflows/deploy.yml` is a `workflow_dispatch` placeholder scaffold.

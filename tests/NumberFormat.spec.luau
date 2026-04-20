@@ -38,3 +38,11 @@ end)
 runCase('preserves sign for negative values', function()
     expectEqual(NumberFormat.formatCompact(-12345), '-12.3 K', 'negative values keep minus sign')
 end)
+
+runCase('trims unnecessary trailing decimal zeros', function()
+    expectEqual(
+        NumberFormat.formatCompact(1200),
+        '1.2 K',
+        'should avoid trailing .0 for compact values'
+    )
+end)
