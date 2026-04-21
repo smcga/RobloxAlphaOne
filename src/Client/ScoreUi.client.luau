@@ -11,6 +11,7 @@ local Constants = require(Shared:WaitForChild('Constants'))
 local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ScorePopupLogic = require(Shared:WaitForChild('ScorePopupLogic'))
+local ZoneUnlockUiLogic = require(Shared:WaitForChild('ZoneUnlockUiLogic'))
 
 local screenGui = Instance.new('ScreenGui')
 screenGui.Name = 'ScoreGui'
@@ -40,9 +41,22 @@ rebirthsLabel.Position = UDim2.fromOffset(16, 72)
 rebirthsLabel.Text = 'Rebirths: 0'
 rebirthsLabel.Parent = screenGui
 
+local nextUnlockLabel = scoreLabel:Clone()
+nextUnlockLabel.Name = 'NextUnlockLabel'
+nextUnlockLabel.Size = UDim2.fromOffset(460, 48)
+nextUnlockLabel.Position = UDim2.fromOffset(16, 128)
+nextUnlockLabel.TextSize = 18
+nextUnlockLabel.Text = 'Next: Age of Brass at 600 (600 to go)'
+nextUnlockLabel.Parent = screenGui
+
 local function setScoreAndRebirths(score: number, rebirths: number)
     scoreLabel.Text = string.format('Score: %s', NumberFormat.formatCompact(score))
     rebirthsLabel.Text = string.format('Rebirths: %s', NumberFormat.formatCompact(rebirths))
+    nextUnlockLabel.Text = ZoneUnlockUiLogic.buildNextUnlockText(
+        score,
+        Constants.AGE_ZONE_CONFIGS,
+        NumberFormat.formatCompact
+    )
 end
 
 local POPUP_WIDTH = 160
@@ -99,7 +113,7 @@ local adminStateUpdatedEvent = Remotes.waitForAdminStateUpdatedEvent()
 local adminPanel = Instance.new('Frame')
 adminPanel.Name = 'AdminPanel'
 adminPanel.Size = UDim2.fromOffset(220, 128)
-adminPanel.Position = UDim2.fromOffset(16, 128)
+adminPanel.Position = UDim2.fromOffset(16, 184)
 adminPanel.BackgroundTransparency = 0.3
 adminPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 adminPanel.Visible = false

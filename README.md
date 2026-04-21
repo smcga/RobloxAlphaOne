@@ -8,6 +8,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Shows `Score: 0` UI on join/spawn.
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
 - Shows `Rebirths: 0` UI under score on join/spawn.
+- Shows a live next-unlock tracker (for example `Next: Age of Brass at 600 (595 to go)`) so players can clearly see the score needed for the next age.
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
 - Shows an owner-only admin panel with buttons to multiply current score by `2x` or `10x`.
 - Increments score while inside age zones, with each age granting a higher score-per-second multiplier.
@@ -92,6 +93,7 @@ Keep this terminal running while you work.
 5. Verify expected MVP behavior:
    - A `Baseplate`, a `WorldDecor` folder (hills/paths/rocks plus inserted Creator Store realistic tree assets), twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
+   - You see a next-unlock tracker in the UI (example: `Next: Age of Brass at 600 (595 to go)`), which updates as your score increases.
    - Whenever score increases, you see a brief floating popup with the compact increase amount (example: `+1.6k`) at a random position.
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
    - Score gain scales with rebirths (example: `2` rebirths doubles whichever age-zone gain is active).
