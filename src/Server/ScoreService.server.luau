@@ -7,6 +7,7 @@ local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
 local AdminLogic = require(Shared:WaitForChild('AdminLogic'))
 local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
+local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
 local ZoneProgressionLogic = require(Shared:WaitForChild('ZoneProgressionLogic'))
@@ -46,6 +47,57 @@ end
 
 local function pushScore(player: Player, score: number, rebirths: number)
     scoreUpdatedEvent:FireClient(player, score, rebirths)
+end
+
+local function getRankNameForScore(score: number): string
+    local rankProgress = RankProgressionLogic.getRankProgress(score, Constants.RANK_CONFIGS)
+    return rankProgress.currentRankName
+end
+
+local function ensureRankTitleLabel(player: Player): TextLabel?
+    local character = player.Character
+    if not character then
+        return nil
+    end
+
+    local head = character:FindFirstChild('Head')
+    if not head or not head:IsA('BasePart') then
+        return nil
+    end
+
+    local billboard = head:FindFirstChild('RankTitleBillboard')
+    if not billboard then
+        billboard = Instance.new('BillboardGui')
+        billboard.Name = 'RankTitleBillboard'
+        billboard.Size = UDim2.fromOffset(200, 36)
+        billboard.StudsOffsetWorldSpace = Vector3.new(0, 2.5, 0)
+        billboard.AlwaysOnTop = true
+        billboard.Parent = head
+    end
+
+    local rankLabel = billboard:FindFirstChild('RankLabel')
+    if not rankLabel then
+        rankLabel = Instance.new('TextLabel')
+        rankLabel.Name = 'RankLabel'
+        rankLabel.Size = UDim2.fromScale(1, 1)
+        rankLabel.BackgroundTransparency = 1
+        rankLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        rankLabel.TextStrokeTransparency = 0.2
+        rankLabel.Font = Enum.Font.GothamBold
+        rankLabel.TextScaled = true
+        rankLabel.Parent = billboard
+    end
+
+    return rankLabel :: TextLabel
+end
+
+local function updateRankTitle(player: Player, score: number)
+    local rankLabel = ensureRankTitleLabel(player)
+    if not rankLabel then
+        return
+    end
+
+    rankLabel.Text = getRankNameForScore(score)
 end
 
 local function pushIsAdmin(player: Player, isAdmin: boolean)
@@ -137,6 +189,7 @@ local function initializePlayerState(player: Player)
     playerStates[player] = state
 
     pushScore(player, state.progressionState.score, state.progressionState.rebirths)
+    updateRankTitle(player, state.progressionState.score)
     pushIsAdmin(player, isPlayerAdmin(player))
 
     player.CharacterAdded:Connect(function()
@@ -147,6 +200,7 @@ local function initializePlayerState(player: Player)
                 currentState.progressionState.score,
                 currentState.progressionState.rebirths
             )
+            updateRankTitle(player, currentState.progressionState.score)
         end
     end)
 end
@@ -173,6 +227,7 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
     progressionState.score = AdminLogic.applyScoreMultiplier(progressionState.score, multiplier)
 
     pushScore(player, progressionState.score, progressionState.rebirths)
+    updateRankTitle(player, progressionState.score)
     markDirty(state)
     savePlayerState(player, false)
 end)
@@ -241,6 +296,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             or tickResult.state.rebirths ~= state.progressionState.rebirths
         then
             pushScore(player, tickResult.state.score, tickResult.state.rebirths)
+            updateRankTitle(player, tickResult.state.score)
             markDirty(state)
             savePlayerState(player, false)
         end

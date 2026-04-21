@@ -9,6 +9,7 @@ local camera = workspace.CurrentCamera
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
 local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
+local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ScorePopupLogic = require(Shared:WaitForChild('ScorePopupLogic'))
 local ZoneUnlockUiLogic = require(Shared:WaitForChild('ZoneUnlockUiLogic'))
@@ -49,6 +50,60 @@ nextUnlockLabel.TextSize = 18
 nextUnlockLabel.Text = 'Next: Age of Brass at 600 (600 to go)'
 nextUnlockLabel.Parent = screenGui
 
+local rankPanel = Instance.new('Frame')
+rankPanel.Name = 'RankPanel'
+rankPanel.Size = UDim2.fromOffset(460, 88)
+rankPanel.Position = UDim2.fromOffset(16, 184)
+rankPanel.BackgroundTransparency = 0.3
+rankPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+rankPanel.Parent = screenGui
+
+local rankPanelCorner = corner:Clone()
+rankPanelCorner.Parent = rankPanel
+
+local rankNameLabel = Instance.new('TextLabel')
+rankNameLabel.Name = 'RankNameLabel'
+rankNameLabel.Size = UDim2.fromOffset(428, 24)
+rankNameLabel.Position = UDim2.fromOffset(16, 10)
+rankNameLabel.BackgroundTransparency = 1
+rankNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+rankNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+rankNameLabel.Font = Enum.Font.GothamBold
+rankNameLabel.TextSize = 18
+rankNameLabel.Text = 'Rank One'
+rankNameLabel.Parent = rankPanel
+
+local rankProgressTrack = Instance.new('Frame')
+rankProgressTrack.Name = 'ProgressTrack'
+rankProgressTrack.Size = UDim2.fromOffset(428, 20)
+rankProgressTrack.Position = UDim2.fromOffset(16, 38)
+rankProgressTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+rankProgressTrack.Parent = rankPanel
+
+local rankProgressTrackCorner = corner:Clone()
+rankProgressTrackCorner.Parent = rankProgressTrack
+
+local rankProgressFill = Instance.new('Frame')
+rankProgressFill.Name = 'ProgressFill'
+rankProgressFill.Size = UDim2.fromScale(0, 1)
+rankProgressFill.BackgroundColor3 = Color3.fromRGB(64, 205, 136)
+rankProgressFill.Parent = rankProgressTrack
+
+local rankProgressFillCorner = corner:Clone()
+rankProgressFillCorner.Parent = rankProgressFill
+
+local rankProgressTextLabel = Instance.new('TextLabel')
+rankProgressTextLabel.Name = 'ProgressTextLabel'
+rankProgressTextLabel.Size = UDim2.fromOffset(428, 18)
+rankProgressTextLabel.Position = UDim2.fromOffset(16, 62)
+rankProgressTextLabel.BackgroundTransparency = 1
+rankProgressTextLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+rankProgressTextLabel.TextXAlignment = Enum.TextXAlignment.Left
+rankProgressTextLabel.Font = Enum.Font.Gotham
+rankProgressTextLabel.TextSize = 14
+rankProgressTextLabel.Text = '0 / 1,000 to Rank Two'
+rankProgressTextLabel.Parent = rankPanel
+
 local function setScoreAndRebirths(score: number, rebirths: number)
     scoreLabel.Text = string.format('Score: %s', NumberFormat.formatCompact(score))
     rebirthsLabel.Text = string.format('Rebirths: %s', NumberFormat.formatCompact(rebirths))
@@ -57,6 +112,24 @@ local function setScoreAndRebirths(score: number, rebirths: number)
         Constants.AGE_ZONE_CONFIGS,
         NumberFormat.formatCompact
     )
+
+    local rankProgress = RankProgressionLogic.getRankProgress(score, Constants.RANK_CONFIGS)
+    rankNameLabel.Text = rankProgress.currentRankName
+    rankProgressFill.Size = UDim2.fromScale(rankProgress.progressAlpha, 1)
+
+    if rankProgress.nextRankName and rankProgress.nextRankRequiredScore then
+        local progressValue = rankProgress.scoreIntoCurrentRank
+        local neededValue = rankProgress.nextRankRequiredScore
+            - rankProgress.currentRankRequiredScore
+        rankProgressTextLabel.Text = string.format(
+            '%s / %s to %s',
+            NumberFormat.formatCompact(progressValue),
+            NumberFormat.formatCompact(neededValue),
+            rankProgress.nextRankName
+        )
+    else
+        rankProgressTextLabel.Text = 'Max rank reached'
+    end
 end
 
 local POPUP_WIDTH = 160
@@ -113,7 +186,7 @@ local adminStateUpdatedEvent = Remotes.waitForAdminStateUpdatedEvent()
 local adminPanel = Instance.new('Frame')
 adminPanel.Name = 'AdminPanel'
 adminPanel.Size = UDim2.fromOffset(220, 128)
-adminPanel.Position = UDim2.fromOffset(16, 184)
+adminPanel.Position = UDim2.fromOffset(16, 280)
 adminPanel.BackgroundTransparency = 0.3
 adminPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 adminPanel.Visible = false
