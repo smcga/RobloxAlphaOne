@@ -39,3 +39,12 @@ runCase('height differences do not affect inclusion', function()
     )
     expectEqual(isInside, true, 'only horizontal distance should matter for circle checks')
 end)
+
+runCase('position exactly on radius boundary returns true', function()
+    local isInside = ZoneLogic.isPositionInsideCircle(
+        { X = 10, Y = 0, Z = 0 },
+        { X = 0, Y = 0, Z = 0 },
+        10
+    )
+    expectEqual(isInside, true, 'boundary position should count as inside circle')
+end)
