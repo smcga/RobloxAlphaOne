@@ -23,6 +23,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 
 ## Project structure
 - `src/Shared` shared modules/constants/pure logic/remotes.
+- `src/Shared/WorldLayout.luau` canonical world decor layout data (AI- and diff-friendly source of truth).
 - `src/Server` server-only world setup and scoring service.
 - `src/Client` UI binding.
 - `tests` deterministic unit tests for pure scoring and zone progression logic.
@@ -102,9 +103,19 @@ preview.buildInWorkspace()
 
 This bakes the world decor, score zones, and rebirth zone into `Workspace` while staying in edit mode so you can see and adjust layout before Play. Save the place after baking if you want those instances persisted in the `.rbxl` place file.
 
+If you adjust generated decor in Studio and want to round-trip those edits back into Git-tracked source, run:
+
+```lua
+local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local preview = require(ReplicatedStorage.Shared.StudioWorldPreview)
+print(preview.exportLayoutFromWorkspace())
+```
+
+This exports the generated decor under `Workspace.GeneratedWorld.WorldDecor` (or legacy `Workspace.WorldDecor`) into a `WorldLayout` module string. Paste it into `src/Shared/WorldLayout.luau` and commit the change.
+
 5. Start Play mode.
 6. Verify expected MVP behavior:
-   - A `Baseplate`, a `WorldDecor` folder (hills/paths/rocks plus inserted Creator Store realistic tree assets), twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
+   - A `GeneratedWorld` folder (with `Baseplate` + `WorldDecor` hills/paths/rocks plus inserted Creator Store realistic tree assets), an empty `ManualWorld` folder for hand-authored extras, twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
    - You see a next-unlock tracker in the UI (example: `Next: Age of Brass at 600 (595 to go)`), which updates as your score increases.
    - You see a rank progression panel (`Rank One` initially) with a filling progress bar and progress text toward the next rank.

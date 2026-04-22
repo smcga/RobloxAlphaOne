@@ -142,7 +142,21 @@ local function anchorModel(model: Model)
 end
 
 local function ensureBaseplate(workspaceRoot: Instance): Part
-    local existing = workspaceRoot:FindFirstChild('Baseplate')
+    local generatedWorld = workspaceRoot:FindFirstChild('GeneratedWorld')
+    if not generatedWorld or not generatedWorld:IsA('Folder') then
+        generatedWorld = Instance.new('Folder')
+        generatedWorld.Name = 'GeneratedWorld'
+        generatedWorld.Parent = workspaceRoot
+    end
+
+    local manualWorld = workspaceRoot:FindFirstChild('ManualWorld')
+    if not manualWorld or not manualWorld:IsA('Folder') then
+        manualWorld = Instance.new('Folder')
+        manualWorld.Name = 'ManualWorld'
+        manualWorld.Parent = workspaceRoot
+    end
+
+    local existing = generatedWorld:FindFirstChild('Baseplate')
     if existing and existing:IsA('Part') then
         return existing
     end
@@ -154,7 +168,7 @@ local function ensureBaseplate(workspaceRoot: Instance): Part
     baseplate.Position = Vector3.new(0, -0.5, 0)
     baseplate.Material = Enum.Material.Concrete
     baseplate.Color = Color3.fromRGB(99, 95, 98)
-    baseplate.Parent = workspaceRoot
+    baseplate.Parent = generatedWorld
 
     return baseplate
 end
@@ -183,6 +197,9 @@ local function ensurePartDecor(parent: Instance, spec: WorldDecorLogic.PartDecor
     part.Transparency = spec.transparency or 0
     part.CanCollide = true
     applyDecorShape(part, spec.shape)
+    part:SetAttribute('Generated', true)
+    part:SetAttribute('WorldId', spec.worldId)
+    part:SetAttribute('DecorKind', spec.kind)
 end
 
 local function getFallbackPartName(specName: string): string
@@ -236,6 +253,11 @@ local function ensureAssetFallbackPart(parent: Instance, spec: WorldDecorLogic.A
 
     fallbackPart.Anchored = true
     fallbackPart.CanCollide = true
+    fallbackPart:SetAttribute('Generated', true)
+    fallbackPart:SetAttribute('WorldId', spec.worldId)
+    fallbackPart:SetAttribute('DecorKind', spec.kind)
+    fallbackPart:SetAttribute('AssetId', spec.assetId)
+    fallbackPart:SetAttribute('DecorScale', spec.scale or 1)
 end
 
 local function ensureAssetDecor(parent: Instance, spec: WorldDecorLogic.AssetDecorSpec)
@@ -267,6 +289,11 @@ local function ensureAssetDecor(parent: Instance, spec: WorldDecorLogic.AssetDec
 
         anchorModel(target)
         target:PivotTo(targetCFrame)
+        target:SetAttribute('Generated', true)
+        target:SetAttribute('WorldId', spec.worldId)
+        target:SetAttribute('DecorKind', spec.kind)
+        target:SetAttribute('AssetId', spec.assetId)
+        target:SetAttribute('DecorScale', spec.scale or 1)
         clearAssetFallbackPart(parent, spec.name)
         return
     end
@@ -274,15 +301,27 @@ local function ensureAssetDecor(parent: Instance, spec: WorldDecorLogic.AssetDec
     target.Anchored = true
     target.CanCollide = true
     target.CFrame = targetCFrame
+    target:SetAttribute('Generated', true)
+    target:SetAttribute('WorldId', spec.worldId)
+    target:SetAttribute('DecorKind', spec.kind)
+    target:SetAttribute('AssetId', spec.assetId)
+    target:SetAttribute('DecorScale', spec.scale or 1)
     clearAssetFallbackPart(parent, spec.name)
 end
 
 local function ensureWorldDecor(workspaceRoot: Instance)
-    local decorFolder = workspaceRoot:FindFirstChild('WorldDecor')
+    local generatedWorld = workspaceRoot:FindFirstChild('GeneratedWorld')
+    if not generatedWorld or not generatedWorld:IsA('Folder') then
+        generatedWorld = Instance.new('Folder')
+        generatedWorld.Name = 'GeneratedWorld'
+        generatedWorld.Parent = workspaceRoot
+    end
+
+    local decorFolder = generatedWorld:FindFirstChild('WorldDecor')
     if not decorFolder or not decorFolder:IsA('Folder') then
         decorFolder = Instance.new('Folder')
         decorFolder.Name = 'WorldDecor'
-        decorFolder.Parent = workspaceRoot
+        decorFolder.Parent = generatedWorld
     end
 
     for _, spec in WorldDecorLogic.getDecorSpecs() do

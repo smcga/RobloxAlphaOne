@@ -310,3 +310,18 @@ runCase('decor specs keep unique names for idempotent world generation', functio
         seen[spec.name] = true
     end
 end)
+
+runCase('decor specs keep unique world ids for workspace round-tripping', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+    local seen: { [string]: boolean } = {}
+
+    for _, spec in specs do
+        expectTruthy(spec.worldId ~= nil and spec.worldId ~= '', 'decor should define worldId')
+
+        if seen[spec.worldId] then
+            error(string.format('decor worldId %s should be unique', spec.worldId))
+        end
+
+        seen[spec.worldId] = true
+    end
+end)
