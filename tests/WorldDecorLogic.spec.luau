@@ -297,3 +297,16 @@ runCase('part-based decor does not clip deeply below the floor', function()
         end
     end
 end)
+
+runCase('decor specs keep unique names for idempotent world generation', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+    local seen: { [string]: boolean } = {}
+
+    for _, spec in specs do
+        if seen[spec.name] then
+            error(string.format('decor name %s should be unique', spec.name))
+        end
+
+        seen[spec.name] = true
+    end
+end)

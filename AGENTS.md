@@ -23,6 +23,11 @@
 - Run format, lint, tests, and Rojo build validation when practical.
 - Update README whenever setup or commands change.
 
+## Studio visibility parity for world content
+- Any change to world generation, world decor, zone placement, or other Workspace-authored gameplay geometry must keep a clear Studio edit-mode visibility path (for example, shared builder + command/plugin trigger) in addition to runtime generation.
+- Do not land world-layout changes that are only visible after entering Play mode without also documenting or updating the edit-mode preview workflow.
+- Keep runtime and Studio preview paths aligned so the same generation logic is reused rather than duplicated.
+
 ## World placement guardrails
 - For `Cylinder` decor parts, explicitly set rotation so their intended axis is correct (for example, `z=90` to stand trunks upright or lay circular pads flat).
 - Position parts using center-based math (`position.y >= floorY + halfHeight`) so props do not clip severely through the baseplate.

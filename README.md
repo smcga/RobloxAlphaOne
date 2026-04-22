@@ -92,8 +92,18 @@ Keep this terminal running while you work.
 1. Open Roblox Studio.
 2. Install/enable the Rojo Studio plugin (if you have not already).
 3. Connect the plugin to the running Rojo server from Step 5.
-4. Start Play mode.
-5. Verify expected MVP behavior:
+4. (Optional, edit-mode preview) Open **View -> Command Bar** and run:
+
+```lua
+local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local preview = require(ReplicatedStorage.Shared.StudioWorldPreview)
+preview.buildInWorkspace()
+```
+
+This bakes the world decor, score zones, and rebirth zone into `Workspace` while staying in edit mode so you can see and adjust layout before Play. Save the place after baking if you want those instances persisted in the `.rbxl` place file.
+
+5. Start Play mode.
+6. Verify expected MVP behavior:
    - A `Baseplate`, a `WorldDecor` folder (hills/paths/rocks plus inserted Creator Store realistic tree assets), twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
    - You see a next-unlock tracker in the UI (example: `Next: Age of Brass at 600 (595 to go)`), which updates as your score increases.

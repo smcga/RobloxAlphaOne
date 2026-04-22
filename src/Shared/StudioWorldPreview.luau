@@ -4,4 +4,10 @@ local ReplicatedStorage = game:GetService('ReplicatedStorage')
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local WorldBuilder = require(Shared:WaitForChild('WorldBuilder'))
 
-WorldBuilder.build(Workspace)
+local StudioWorldPreview = {}
+
+function StudioWorldPreview.buildInWorkspace()
+    WorldBuilder.build(Workspace)
+end
+
+return StudioWorldPreview
