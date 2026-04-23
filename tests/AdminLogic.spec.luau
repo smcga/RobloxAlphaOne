@@ -38,3 +38,16 @@ runCase('resetScoreAndRebirths zeros both values', function()
     expectEqual(score, 0, 'reset score should be 0')
     expectEqual(rebirths, 0, 'reset rebirths should be 0')
 end)
+
+runCase('skipLuckyChestTimer sets a future chest timestamp to ready now', function()
+    expectEqual(
+        AdminLogic.skipLuckyChestTimer(1200),
+        0,
+        'future chest timestamp should be forced to ready'
+    )
+end)
+
+runCase('skipLuckyChestTimer keeps already-ready chest timestamp unchanged', function()
+    expectEqual(AdminLogic.skipLuckyChestTimer(0), 0, 'ready timestamp should remain unchanged')
+    expectEqual(AdminLogic.skipLuckyChestTimer(-25), -25, 'past timestamp should remain unchanged')
+end)

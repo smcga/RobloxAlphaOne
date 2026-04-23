@@ -21,4 +21,12 @@ function AdminLogic.resetScoreAndRebirths(): (number, number)
     return 0, 0
 end
 
+function AdminLogic.skipLuckyChestTimer(currentNextLuckyChestOpenAt: number): number
+    if currentNextLuckyChestOpenAt <= 0 then
+        return currentNextLuckyChestOpenAt
+    end
+
+    return 0
+end
+
 return AdminLogic
