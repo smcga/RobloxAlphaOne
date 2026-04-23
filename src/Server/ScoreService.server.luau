@@ -2,6 +2,8 @@ local DataStoreService = game:GetService('DataStoreService')
 local Players = game:GetService('Players')
 local RunService = game:GetService('RunService')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local Debris = game:GetService('Debris')
+local SoundService = game:GetService('SoundService')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
@@ -10,6 +12,7 @@ local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
+local LockedZonePenaltyLogic = require(Shared:WaitForChild('LockedZonePenaltyLogic'))
 local ZoneProgressionLogic = require(Shared:WaitForChild('ZoneProgressionLogic'))
 
 type ZoneProgressionState = ZoneProgressionLogic.ZoneProgressionState
@@ -19,6 +22,7 @@ type PlayerScoreState = {
     dirtyVersion: number,
     lastSavedVersion: number,
     lastSaveClock: number,
+    lastLockedZonePenaltyClock: number?,
 }
 
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
@@ -26,6 +30,124 @@ local adminScoreMultiplyRequestEvent = Remotes.getOrCreateAdminScoreMultiplyRequ
 local adminStateUpdatedEvent = Remotes.getOrCreateAdminStateUpdatedEvent()
 local playerStates: { [Player]: PlayerScoreState } = {}
 local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
+
+local function getOrCreateLockedZoneDeathSound(): Sound
+    local existing = SoundService:FindFirstChild(Constants.LOCKED_ZONE_DEATH_SOUND_NAME)
+    local sound: Sound
+
+    if existing and existing:IsA('Sound') then
+        sound = existing
+    else
+        sound = Instance.new('Sound')
+        sound.Name = Constants.LOCKED_ZONE_DEATH_SOUND_NAME
+        sound.Parent = SoundService
+    end
+
+    sound.SoundId = Constants.LOCKED_ZONE_DEATH_SOUND_ID
+    sound.Volume = Constants.LOCKED_ZONE_DEATH_SOUND_VOLUME
+    sound.RollOffMode = Enum.RollOffMode.InverseTapered
+
+    return sound
+end
+
+local function emitNopeParticles(originPosition: Vector3)
+    local container = Instance.new('Folder')
+    container.Name = 'LockedZoneNopeParticles'
+    container.Parent = workspace
+
+    Debris:AddItem(container, Constants.LOCKED_ZONE_NOPE_PARTICLE_LIFETIME_SECONDS)
+
+    for _ = 1, Constants.LOCKED_ZONE_NOPE_PARTICLE_COUNT do
+        local particle = Instance.new('Part')
+        particle.Name = 'NopeParticle'
+        particle.Size = Vector3.new(0.45, 0.45, 0.45)
+        particle.CFrame = CFrame.new(originPosition + Vector3.new(0, 2.5, 0))
+        particle.Transparency = 1
+        particle.CanCollide = false
+        particle.CanTouch = false
+        particle.CanQuery = false
+        particle.Massless = true
+        particle.Parent = container
+
+        local billboard = Instance.new('BillboardGui')
+        billboard.Size = UDim2.fromOffset(140, 60)
+        billboard.AlwaysOnTop = true
+        billboard.StudsOffsetWorldSpace = Vector3.new(0, 0.8, 0)
+        billboard.Parent = particle
+
+        local label = Instance.new('TextLabel')
+        label.Size = UDim2.fromScale(1, 1)
+        label.BackgroundTransparency = 1
+        label.Text = 'Nope!'
+        label.TextScaled = true
+        label.Font = Enum.Font.GothamBlack
+        label.TextColor3 = Color3.fromRGB(255, 95, 207)
+        label.TextStrokeTransparency = 0.2
+        label.Rotation = math.random(-20, 20)
+        label.Parent = billboard
+
+        local direction = Vector3.new(
+            math.random(-100, 100) / 100,
+            math.random(20, 100) / 100,
+            math.random(-100, 100) / 100
+        )
+        if direction.Magnitude <= 0 then
+            direction = Vector3.new(0, 1, 0)
+        end
+
+        local speed = math.random(
+            Constants.LOCKED_ZONE_NOPE_PARTICLE_MIN_SPEED,
+            Constants.LOCKED_ZONE_NOPE_PARTICLE_MAX_SPEED
+        )
+        particle.AssemblyLinearVelocity = direction.Unit * speed
+    end
+end
+
+local function penalizeLockedZoneEntry(
+    player: Player,
+    state: PlayerScoreState,
+    rootPart: BasePart,
+    lockedZoneConfig: {
+        requiredScore: number,
+        scoreIncrement: number,
+        center: Vector3,
+    }
+)
+    local now = os.clock()
+    local lastPenaltyClock = state.lastLockedZonePenaltyClock
+    if
+        lastPenaltyClock
+        and now - lastPenaltyClock < Constants.LOCKED_ZONE_PENALTY_COOLDOWN_SECONDS
+    then
+        return
+    end
+    state.lastLockedZonePenaltyClock = now
+
+    local horizontalDirection = LockedZonePenaltyLogic.getKnockbackHorizontalDirection(
+        rootPart.Position,
+        lockedZoneConfig.center
+    )
+    rootPart.AssemblyLinearVelocity = Vector3.new(
+        horizontalDirection.X * Constants.LOCKED_ZONE_KNOCKBACK_HORIZONTAL_SPEED,
+        Constants.LOCKED_ZONE_KNOCKBACK_UPWARD_SPEED,
+        horizontalDirection.Z * Constants.LOCKED_ZONE_KNOCKBACK_HORIZONTAL_SPEED
+    )
+
+    emitNopeParticles(rootPart.Position)
+    getOrCreateLockedZoneDeathSound():Play()
+
+    local character = player.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass('Humanoid')
+        if humanoid then
+            task.delay(Constants.LOCKED_ZONE_KILL_DELAY_SECONDS, function()
+                if humanoid.Parent and humanoid.Health > 0 then
+                    humanoid.Health = 0
+                end
+            end)
+        end
+    end
+end
 
 local function getPlayerDataStoreKey(player: Player): string
     return string.format('player_%s', tostring(player.UserId))
@@ -114,6 +236,7 @@ local function createPlayerState(score: number, rebirths: number): PlayerScoreSt
         dirtyVersion = 0,
         lastSavedVersion = 0,
         lastSaveClock = os.clock(),
+        lastLockedZonePenaltyClock = nil,
     }
 end
 
@@ -258,6 +381,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
         local rootPart = getHumanoidRootPart(player)
         local isInsideAgeZones = {}
         local isInsideRebirthZone = false
+        local lockedZoneIndex: number? = nil
 
         if rootPart then
             for index, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
@@ -272,6 +396,19 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
                 Constants.REBIRTH_ZONE_CENTER,
                 Constants.REBIRTH_ZONE_RADIUS
             )
+            lockedZoneIndex = LockedZonePenaltyLogic.getFirstLockedZoneIndex(
+                state.progressionState.score,
+                isInsideAgeZones,
+                Constants.AGE_ZONE_CONFIGS
+            )
+            if lockedZoneIndex then
+                penalizeLockedZoneEntry(
+                    player,
+                    state,
+                    rootPart,
+                    Constants.AGE_ZONE_CONFIGS[lockedZoneIndex]
+                )
+            end
         end
 
         local ageZoneProgressionConfigs = {}
