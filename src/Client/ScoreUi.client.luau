@@ -195,11 +195,12 @@ end
 
 local scoreUpdatedEvent = Remotes.waitForScoreUpdatedEvent()
 local adminScoreMultiplyRequestEvent = Remotes.waitForAdminScoreMultiplyRequestEvent()
+local adminResetProgressRequestEvent = Remotes.waitForAdminResetProgressRequestEvent()
 local adminStateUpdatedEvent = Remotes.waitForAdminStateUpdatedEvent()
 
 local adminPanel = Instance.new('Frame')
 adminPanel.Name = 'AdminPanel'
-adminPanel.Size = UDim2.fromOffset(220, 128)
+adminPanel.Size = UDim2.fromOffset(220, 214)
 adminPanel.Position = UDim2.fromOffset(16, 280)
 adminPanel.BackgroundTransparency = 0.3
 adminPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -247,6 +248,66 @@ for index, multiplier in ipairs(Constants.ADMIN_SCORE_MULTIPLIERS) do
     createMultiplierButton(multiplier, index)
 end
 
+local resetProgressButton = Instance.new('TextButton')
+resetProgressButton.Name = 'ResetProgressButton'
+resetProgressButton.Size = UDim2.fromOffset(188, 36)
+resetProgressButton.Position = UDim2.fromOffset(16, 36 + (#Constants.ADMIN_SCORE_MULTIPLIERS * 44))
+resetProgressButton.BackgroundColor3 = Color3.fromRGB(135, 48, 48)
+resetProgressButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+resetProgressButton.Font = Enum.Font.GothamBold
+resetProgressButton.TextSize = 16
+resetProgressButton.Text = 'Reset Score + Rebirths'
+resetProgressButton.Parent = adminPanel
+
+local resetProgressButtonCorner = corner:Clone()
+resetProgressButtonCorner.Parent = resetProgressButton
+
+local resetConfirmationLabel = Instance.new('TextLabel')
+resetConfirmationLabel.Name = 'ResetConfirmationLabel'
+resetConfirmationLabel.Size = UDim2.fromOffset(188, 30)
+resetConfirmationLabel.Position = UDim2.fromOffset(16, 176)
+resetConfirmationLabel.BackgroundTransparency = 1
+resetConfirmationLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
+resetConfirmationLabel.TextXAlignment = Enum.TextXAlignment.Center
+resetConfirmationLabel.TextYAlignment = Enum.TextYAlignment.Center
+resetConfirmationLabel.Font = Enum.Font.Gotham
+resetConfirmationLabel.TextSize = 14
+resetConfirmationLabel.TextWrapped = true
+resetConfirmationLabel.Text = ''
+resetConfirmationLabel.Parent = adminPanel
+
+local resetConfirmationPending = false
+local resetConfirmationToken = 0
+local RESET_CONFIRMATION_TIMEOUT_SECONDS = 4
+
+local function clearResetConfirmationPrompt()
+    resetConfirmationPending = false
+    resetProgressButton.Text = 'Reset Score + Rebirths'
+    resetConfirmationLabel.Text = ''
+end
+
+resetProgressButton.Activated:Connect(function()
+    if not resetConfirmationPending then
+        resetConfirmationPending = true
+        resetConfirmationToken += 1
+        local currentToken = resetConfirmationToken
+
+        resetProgressButton.Text = 'Click Again to Confirm'
+        resetConfirmationLabel.Text = 'Are you sure? This permanently resets your progress.'
+
+        task.delay(RESET_CONFIRMATION_TIMEOUT_SECONDS, function()
+            if resetConfirmationPending and currentToken == resetConfirmationToken then
+                clearResetConfirmationPrompt()
+            end
+        end)
+
+        return
+    end
+
+    adminResetProgressRequestEvent:FireServer()
+    clearResetConfirmationPrompt()
+end)
+
 local previousScore: number? = nil
 
 scoreUpdatedEvent.OnClientEvent:Connect(function(score: number, rebirths: number)
@@ -261,4 +322,7 @@ end)
 
 adminStateUpdatedEvent.OnClientEvent:Connect(function(isAdmin: boolean)
     adminPanel.Visible = isAdmin
+    if not isAdmin then
+        clearResetConfirmationPrompt()
+    end
 end)

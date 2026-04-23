@@ -17,4 +17,8 @@ function AdminLogic.applyScoreMultiplier(score: number, multiplier: number): num
     return math.floor(score * multiplier)
 end
 
+function AdminLogic.resetScoreAndRebirths(): (number, number)
+    return 0, 0
+end
+
 return AdminLogic

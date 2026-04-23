@@ -30,6 +30,7 @@ type PlayerScoreState = {
 
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
 local adminScoreMultiplyRequestEvent = Remotes.getOrCreateAdminScoreMultiplyRequestEvent()
+local adminResetProgressRequestEvent = Remotes.getOrCreateAdminResetProgressRequestEvent()
 local adminStateUpdatedEvent = Remotes.getOrCreateAdminStateUpdatedEvent()
 local playerStates: { [Player]: PlayerScoreState } = {}
 local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
@@ -532,6 +533,26 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
 
     local progressionState = state.progressionState
     progressionState.score = AdminLogic.applyScoreMultiplier(progressionState.score, multiplier)
+
+    pushScore(player, progressionState.score, progressionState.rebirths)
+    updateRankTitle(player, progressionState.score)
+    updateRankAura(player, state)
+    markDirty(state)
+    savePlayerState(player, false)
+end)
+
+adminResetProgressRequestEvent.OnServerEvent:Connect(function(player: Player)
+    if not isPlayerAdmin(player) then
+        return
+    end
+
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    local progressionState = state.progressionState
+    progressionState.score, progressionState.rebirths = AdminLogic.resetScoreAndRebirths()
 
     pushScore(player, progressionState.score, progressionState.rebirths)
     updateRankTitle(player, progressionState.score)
