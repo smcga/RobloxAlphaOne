@@ -85,6 +85,22 @@ runCase('decor specs include stable scene pieces', function()
     expectTruthy(foundAgeOfBeadsDecor, 'age of beads decor should exist')
 end)
 
+runCase('decor specs keep unique stable world ids for round-trip export', function()
+    local specs = WorldDecorLogic.getDecorSpecs()
+    local seen: { [string]: boolean } = {}
+
+    for _, spec in specs do
+        expectTruthy(spec.id ~= nil and spec.id ~= '', 'decor entry should define a stable id')
+        expectEqual(spec.id, spec.name, 'decor id should match name for deterministic mapping')
+
+        if seen[spec.id] then
+            error(string.format('decor id %s should be unique', spec.id))
+        end
+
+        seen[spec.id] = true
+    end
+end)
+
 runCase('asset entries keep a deterministic unique asset-id set', function()
     local specs = WorldDecorLogic.getDecorSpecs()
     local uniqueIds: { [number]: boolean } = {}

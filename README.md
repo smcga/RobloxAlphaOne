@@ -100,11 +100,29 @@ local preview = require(ReplicatedStorage.Shared.StudioWorldPreview)
 preview.buildInWorkspace()
 ```
 
-This bakes the world decor, score zones, and rebirth zone into `Workspace` while staying in edit mode so you can see and adjust layout before Play. Save the place after baking if you want those instances persisted in the `.rbxl` place file.
+This bakes the world decor, score zones, and rebirth zone into `Workspace` while staying in edit mode so you can see and adjust layout before Play. Generated decor now lives under `Workspace.GeneratedWorld.WorldDecor` and each generated instance is tagged with `Generated=true` and a stable `WorldId` attribute for round-trip export.
 
-5. Start Play mode.
-6. Verify expected MVP behavior:
-   - A `Baseplate`, a `WorldDecor` folder (hills/paths/rocks plus inserted Creator Store realistic tree assets), twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
+
+5. (Optional, smooth round trip with no copy/paste) After moving decor in Studio, run this in the Command Bar:
+
+```lua
+local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local preview = require(ReplicatedStorage.Shared.StudioWorldPreview)
+preview.syncLayoutModuleFromWorkspace()
+```
+
+This captures decor from:
+- `Workspace.GeneratedWorld.WorldDecor` (script-built decor)
+- `Workspace.ManualWorld` (hand-placed decor you add in Studio)
+- legacy `Workspace.WorldDecor` (if present)
+
+and writes the generated module source directly into `ReplicatedStorage.Shared.WorldLayout.Source`, so Rojo can sync the change back to `src/Shared/WorldLayout.luau` without manual paste.
+
+6. (Optional, one-click plugin) A Studio plugin scaffold is included at `studio/WorldLayoutSync.plugin.lua`. Install it as a local plugin, then click **World Layout -> Sync Layout** to build + sync in one step.
+
+7. Start Play mode.
+8. Verify expected MVP behavior:
+   - A `Baseplate`, a `GeneratedWorld/WorldDecor` folder for generated decor, an optional `ManualWorld` folder for hand-placed decor you want persisted to layout scripts, twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
    - You see a next-unlock tracker in the UI (example: `Next: Age of Brass at 600 (595 to go)`), which updates as your score increases.
    - You see a rank progression panel (`Rank One` initially) with a filling progress bar and progress text toward the next rank.
