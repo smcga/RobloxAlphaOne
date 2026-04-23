@@ -404,6 +404,7 @@ end
 local scoreUpdatedEvent = Remotes.waitForScoreUpdatedEvent()
 local adminScoreMultiplyRequestEvent = Remotes.waitForAdminScoreMultiplyRequestEvent()
 local adminResetProgressRequestEvent = Remotes.waitForAdminResetProgressRequestEvent()
+local adminSkipLuckyChestTimerRequestEvent = Remotes.waitForAdminSkipLuckyChestTimerRequestEvent()
 local adminStateUpdatedEvent = Remotes.waitForAdminStateUpdatedEvent()
 local luckyChestStatusUpdatedEvent = Remotes.waitForLuckyChestStatusUpdatedEvent()
 local luckyChestOpenRequestEvent = Remotes.waitForLuckyChestOpenRequestEvent()
@@ -411,7 +412,7 @@ local luckyChestOpenedEvent = Remotes.waitForLuckyChestOpenedEvent()
 
 local adminPanel = Instance.new('Frame')
 adminPanel.Name = 'AdminPanel'
-adminPanel.Size = UDim2.fromOffset(220, 214)
+adminPanel.Size = UDim2.fromOffset(220, 250)
 adminPanel.Position = UDim2.fromOffset(16, 280)
 adminPanel.BackgroundTransparency = 0.3
 adminPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -473,10 +474,25 @@ resetProgressButton.Parent = adminPanel
 local resetProgressButtonCorner = corner:Clone()
 resetProgressButtonCorner.Parent = resetProgressButton
 
+local skipLuckyChestTimerButton = Instance.new('TextButton')
+skipLuckyChestTimerButton.Name = 'SkipLuckyChestTimerButton'
+skipLuckyChestTimerButton.Size = UDim2.fromOffset(188, 36)
+skipLuckyChestTimerButton.Position =
+    UDim2.fromOffset(16, 36 + ((#Constants.ADMIN_SCORE_MULTIPLIERS + 1) * 44))
+skipLuckyChestTimerButton.BackgroundColor3 = Color3.fromRGB(53, 103, 62)
+skipLuckyChestTimerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+skipLuckyChestTimerButton.Font = Enum.Font.GothamBold
+skipLuckyChestTimerButton.TextSize = 16
+skipLuckyChestTimerButton.Text = 'Skip Lucky Chest Timer'
+skipLuckyChestTimerButton.Parent = adminPanel
+
+local skipLuckyChestTimerButtonCorner = corner:Clone()
+skipLuckyChestTimerButtonCorner.Parent = skipLuckyChestTimerButton
+
 local resetConfirmationLabel = Instance.new('TextLabel')
 resetConfirmationLabel.Name = 'ResetConfirmationLabel'
 resetConfirmationLabel.Size = UDim2.fromOffset(188, 30)
-resetConfirmationLabel.Position = UDim2.fromOffset(16, 176)
+resetConfirmationLabel.Position = UDim2.fromOffset(16, 212)
 resetConfirmationLabel.BackgroundTransparency = 1
 resetConfirmationLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
 resetConfirmationLabel.TextXAlignment = Enum.TextXAlignment.Center
@@ -517,6 +533,10 @@ resetProgressButton.Activated:Connect(function()
 
     adminResetProgressRequestEvent:FireServer()
     clearResetConfirmationPrompt()
+end)
+
+skipLuckyChestTimerButton.Activated:Connect(function()
+    adminSkipLuckyChestTimerRequestEvent:FireServer()
 end)
 
 local previousScore: number? = nil

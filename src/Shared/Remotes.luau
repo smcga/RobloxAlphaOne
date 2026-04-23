@@ -6,6 +6,7 @@ Remotes.FOLDER_NAME = 'Remotes'
 Remotes.SCORE_UPDATED_EVENT = 'ScoreUpdated'
 Remotes.ADMIN_SCORE_MULTIPLY_REQUEST_EVENT = 'AdminScoreMultiplyRequest'
 Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT = 'AdminResetProgressRequest'
+Remotes.ADMIN_SKIP_LUCKY_CHEST_TIMER_REQUEST_EVENT = 'AdminSkipLuckyChestTimerRequest'
 Remotes.ADMIN_STATE_UPDATED_EVENT = 'AdminStateUpdated'
 Remotes.LUCKY_CHEST_STATUS_UPDATED_EVENT = 'LuckyChestStatusUpdated'
 Remotes.LUCKY_CHEST_OPEN_REQUEST_EVENT = 'LuckyChestOpenRequest'
@@ -78,6 +79,14 @@ function Remotes.waitForAdminResetProgressRequestEvent(): RemoteEvent
     local folder = ReplicatedStorage:WaitForChild(Remotes.FOLDER_NAME)
     local event = folder:WaitForChild(Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT)
     return event :: RemoteEvent
+end
+
+function Remotes.getOrCreateAdminSkipLuckyChestTimerRequestEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.ADMIN_SKIP_LUCKY_CHEST_TIMER_REQUEST_EVENT)
+end
+
+function Remotes.waitForAdminSkipLuckyChestTimerRequestEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.ADMIN_SKIP_LUCKY_CHEST_TIMER_REQUEST_EVENT)
 end
 
 function Remotes.getOrCreateAdminStateUpdatedEvent(): RemoteEvent
