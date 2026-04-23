@@ -1,105 +1,48 @@
-local RANK_NAMES = {
-    'Rank One',
-    'Rank Two',
-    'Rank Three',
-    'Rank Four',
-    'Rank Five',
-    'Rank Six',
-    'Rank Seven',
-    'Rank Eight',
-    'Rank Nine',
-    'Rank Ten',
-    'Rank Eleven',
-    'Rank Twelve',
-    'Rank Thirteen',
-    'Rank Fourteen',
-    'Rank Fifteen',
-    'Rank Sixteen',
-    'Rank Seventeen',
-    'Rank Eighteen',
-    'Rank Nineteen',
-    'Rank Twenty',
-    'Rank Twenty One',
-    'Rank Twenty Two',
-    'Rank Twenty Three',
-    'Rank Twenty Four',
-    'Rank Twenty Five',
-    'Rank Twenty Six',
-    'Rank Twenty Seven',
-    'Rank Twenty Eight',
-    'Rank Twenty Nine',
-    'Rank Thirty',
-    'Rank Thirty One',
-    'Rank Thirty Two',
-    'Rank Thirty Three',
-    'Rank Thirty Four',
-    'Rank Thirty Five',
-    'Rank Thirty Six',
-    'Rank Thirty Seven',
-    'Rank Thirty Eight',
-    'Rank Thirty Nine',
-    'Rank Forty',
-    'Rank Forty One',
-    'Rank Forty Two',
-    'Rank Forty Three',
-    'Rank Forty Four',
-    'Rank Forty Five',
-    'Rank Forty Six',
-    'Rank Forty Seven',
-    'Rank Forty Eight',
-    'Rank Forty Nine',
-    'Rank Fifty',
-    'Rank Fifty One',
-    'Rank Fifty Two',
-    'Rank Fifty Three',
-    'Rank Fifty Four',
-    'Rank Fifty Five',
-    'Rank Fifty Six',
-    'Rank Fifty Seven',
-    'Rank Fifty Eight',
-    'Rank Fifty Nine',
-    'Rank Sixty',
-    'Rank Sixty One',
-    'Rank Sixty Two',
-    'Rank Sixty Three',
-    'Rank Sixty Four',
-    'Rank Sixty Five',
-    'Rank Sixty Six',
-    'Rank Sixty Seven',
-    'Rank Sixty Eight',
-    'Rank Sixty Nine',
-    'Rank Seventy',
-    'Rank Seventy One',
-    'Rank Seventy Two',
-    'Rank Seventy Three',
-    'Rank Seventy Four',
-    'Rank Seventy Five',
-    'Rank Seventy Six',
-    'Rank Seventy Seven',
-    'Rank Seventy Eight',
-    'Rank Seventy Nine',
-    'Rank Eighty',
-    'Rank Eighty One',
-    'Rank Eighty Two',
-    'Rank Eighty Three',
-    'Rank Eighty Four',
-    'Rank Eighty Five',
-    'Rank Eighty Six',
-    'Rank Eighty Seven',
-    'Rank Eighty Eight',
-    'Rank Eighty Nine',
-    'Rank Ninety',
-    'Rank Ninety One',
-    'Rank Ninety Two',
-    'Rank Ninety Three',
-    'Rank Ninety Four',
-    'Rank Ninety Five',
-    'Rank Ninety Six',
-    'Rank Ninety Seven',
-    'Rank Ninety Eight',
-    'Rank Ninety Nine',
-    'Rank One Hundred',
+local RANK_COUNT = 100
+
+local AGE_STAGE_LABELS = {
+    { maxAge = 1, label = 'Newborn Spark' },
+    { maxAge = 3, label = 'Curious Toddler' },
+    { maxAge = 5, label = 'Playground Explorer' },
+    { maxAge = 8, label = 'Bright Student' },
+    { maxAge = 12, label = 'Junior Inventor' },
+    { maxAge = 15, label = 'Teen Tinkerer' },
+    { maxAge = 18, label = 'Rising Trailblazer' },
+    { maxAge = 22, label = 'Campus Coder' },
+    { maxAge = 26, label = 'Early Prodigy' },
+    { maxAge = 30, label = 'Prime Builder' },
+    { maxAge = 35, label = 'Seasoned Specialist' },
+    { maxAge = 40, label = 'Master Operator' },
+    { maxAge = 45, label = 'Veteran Architect' },
+    { maxAge = 50, label = 'Legendary Strategist' },
+    { maxAge = 56, label = 'Elite Visionary' },
+    { maxAge = 62, label = 'Titan Mentor' },
+    { maxAge = 70, label = 'Sage Innovator' },
+    { maxAge = 78, label = 'Elder Luminary' },
+    { maxAge = 88, label = 'Mythic Ancestor' },
+    { maxAge = 99, label = 'Timeless Paragon' },
 }
+
+local function getStageLabelForAge(ageYears: number): string
+    for _, stage in ipairs(AGE_STAGE_LABELS) do
+        if ageYears <= stage.maxAge then
+            return stage.label
+        end
+    end
+
+    return AGE_STAGE_LABELS[#AGE_STAGE_LABELS].label
+end
+
+local function buildAgeRankNames(rankCount: number): { string }
+    local names = {}
+
+    for rankIndex = 1, rankCount do
+        local ageYears = rankIndex - 1
+        names[rankIndex] = string.format('Age %02d %s', ageYears, getStageLabelForAge(ageYears))
+    end
+
+    return names
+end
 
 local function buildRankConfigs(
     rankNames: { string },
@@ -129,7 +72,7 @@ local Constants = {
     SCORE_DATASTORE_NAME = 'PlayerScoreDataV1',
     SCORE_AUTOSAVE_INTERVAL_SECONDS = 30,
     RANK_SCORE_STEP = 1000,
-    RANK_CONFIGS = buildRankConfigs(RANK_NAMES, 1000),
+    RANK_CONFIGS = buildRankConfigs(buildAgeRankNames(RANK_COUNT), 1000),
 
     AGE_ZONE_SECONDS_PER_AGE = 120,
 

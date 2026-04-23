@@ -1,9 +1,9 @@
 local RankProgressionLogic = require('../src/Shared/RankProgressionLogic')
 
 local rankConfigs = {
-    { name = 'Rank One', requiredScore = 0 },
-    { name = 'Rank Two', requiredScore = 1000 },
-    { name = 'Rank Three', requiredScore = 2000 },
+    { name = 'Age 00 Newborn Spark', requiredScore = 0 },
+    { name = 'Age 01 Newborn Spark', requiredScore = 1000 },
+    { name = 'Age 02 Curious Toddler', requiredScore = 2000 },
 }
 
 local function expectEqual(actual: any, expected: any, message: string)
@@ -32,8 +32,16 @@ end)
 runCase('getRankProgress reports progress toward the next rank', function()
     local rankProgress = RankProgressionLogic.getRankProgress(1500, rankConfigs)
 
-    expectEqual(rankProgress.currentRankName, 'Rank Two', 'current rank should be Rank Two')
-    expectEqual(rankProgress.nextRankName, 'Rank Three', 'next rank should be Rank Three')
+    expectEqual(
+        rankProgress.currentRankName,
+        'Age 01 Newborn Spark',
+        'current rank should be Age 01 Newborn Spark'
+    )
+    expectEqual(
+        rankProgress.nextRankName,
+        'Age 02 Curious Toddler',
+        'next rank should be Age 02 Curious Toddler'
+    )
     expectEqual(rankProgress.scoreIntoCurrentRank, 500, 'score into rank should be 500')
     expectEqual(rankProgress.scoreNeededForNextRank, 500, '500 score should remain to next rank')
     expectEqual(rankProgress.progressAlpha, 0.5, 'progress bar alpha should be 0.5')
@@ -44,8 +52,8 @@ runCase('getRankProgress clamps negative scores to rank one progress', function(
 
     expectEqual(
         rankProgress.currentRankName,
-        'Rank One',
-        'negative scores should clamp to rank one'
+        'Age 00 Newborn Spark',
+        'negative scores should clamp to the first age rank'
     )
     expectEqual(
         rankProgress.scoreIntoCurrentRank,
@@ -62,7 +70,11 @@ end)
 runCase('getRankProgress returns maxed state when highest rank is reached', function()
     local rankProgress = RankProgressionLogic.getRankProgress(5000, rankConfigs)
 
-    expectEqual(rankProgress.currentRankName, 'Rank Three', 'highest rank should stay active')
+    expectEqual(
+        rankProgress.currentRankName,
+        'Age 02 Curious Toddler',
+        'highest rank should stay active'
+    )
     expectEqual(rankProgress.nextRankName, nil, 'no next rank should exist at cap')
     expectEqual(rankProgress.progressAlpha, 1, 'max rank progress alpha should be full')
 end)
