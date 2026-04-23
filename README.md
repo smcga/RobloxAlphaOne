@@ -11,15 +11,17 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
 - Shows `Rebirths: 0` UI under score on join/spawn.
 - Shows a live next-unlock tracker (for example `Next: Age of Brass at 600 (595 to go)`) so players can clearly see the score needed for the next age.
-- Adds a 100-rank secondary progression track (`Rank One` through `Rank One Hundred`) based on score thresholds, with configurable rank names in shared constants.
+- Adds a 96-rank secondary progression track spanning 12 historical ages (8 ranks per age), with themed rank names configured in shared constants.
 - Shows a rank UI panel with current rank name, a per-rank progress bar, and compact progress text toward the next rank.
 - Displays each player's current rank title above their character's head so other players can see progression at a glance.
+- Grants every rank a unique aura style that ramps up in spectacle with stronger glow, denser particles, animated pulsing light, and scale growth as players climb toward max rank.
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
 - Shows an owner-only admin panel with buttons to multiply current score by `2x` or `10x`.
 - Increments score while inside age zones, with each age granting a higher score-per-second multiplier.
 - Applies a rebirth multiplier to score gain (`max(Rebirths, 1)`), so `2` rebirths means `2x` score/sec.
 - Unlock requirements and score gains scale so each age takes roughly the same active time to complete while totals grow exponentially.
 - Entering the glowing `Rebirth` zone converts score into rebirths (`+1` per `1000` score) and resets score to `0`.
+- Entering a locked age zone before meeting its score requirement now flings the player away, kills them, plays a global death SFX, and bursts a cloud of `Nope!` text particles.
 - Stops score gain immediately when leaving each zone.
 - Adds a server-authoritative Lucky Chest system: once every 5 minutes players can open a chest that spins category then reward item with green/blue/purple/orange/gold rarity odds and can grant score, rebirths, hats, pets, vehicle mounts, or a 1-minute 10x score boost.
 - Shows a timed Lucky Chest UI panel and a full-screen animated spin reveal for category and reward rarity each time the chest is opened.
@@ -122,20 +124,27 @@ This captures decor from:
 
 and writes the generated module source directly into `ReplicatedStorage.Shared.WorldLayout.Source`, so Rojo can sync the change back to `src/Shared/WorldLayout.luau` without manual paste.
 
-6. (Optional, one-click plugin) A Studio plugin scaffold is included at `studio/WorldLayoutSync.plugin.lua`. Install it as a local plugin, then click **World Layout -> Sync Layout** to build + sync in one step.
+6. (Optional, one-click plugin) A Studio plugin scaffold is included at `studio/WorldLayoutSync.plugin.lua`. Install it as a local plugin for a load/save-style round trip:
+   - **World Layout -> Import World** loads from code (`Shared.WorldLayout`) into `Workspace` (load).
+   - **World Layout -> Export World** writes current `Workspace` decor back into `Shared.WorldLayout` (save).
+
+   Both actions print explicit success/failure messages in Studio output. Export failures include the underlying error so you can quickly fix missing folders, missing module wiring, or invalid decor setup.
 
 7. Start Play mode.
 8. Verify expected MVP behavior:
    - A `Baseplate`, a `GeneratedWorld/WorldDecor` folder for generated decor, an optional `ManualWorld` folder for hand-placed decor you want persisted to layout scripts, twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
    - You see a next-unlock tracker in the UI (example: `Next: Age of Brass at 600 (595 to go)`), which updates as your score increases.
-   - You see a rank progression panel (`Rank One` initially) with a filling progress bar and progress text toward the next rank.
+   - You see a rank progression panel (`Pebble Counter` initially) with a filling progress bar and progress text toward the next rank.
    - Whenever score increases, you see a brief floating popup with the compact increase amount (example: `+1.6k`) at a random position.
    - The rank title above each player's head updates automatically as score crosses rank thresholds.
+   - Your avatar aura transforms every rank with unique colors, stronger particles/light pulses, and increased size at higher ranks.
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
    - Score gain scales with rebirths (example: `2` rebirths doubles whichever age-zone gain is active).
    - Age zones unlock in sequence as your score passes each requirement threshold.
    - Entering the `Rebirth` zone resets score to `0` and grants `floor(score / 1000)` rebirths.
+   - Entering a still-locked age zone flings you away, then kills you, while preserving your existing score/rebirth totals.
+   - Locked-zone deaths play a shared SFX for everyone and spawn flying `Nope!` text particles around the punished player.
    - If you're the game owner, admin panel buttons can multiply your current score by `2x` or `10x`.
    - Every 5 minutes, opening the Lucky Chest plays a two-stage spin animation and grants one rarity-based reward (score, rebirths, cosmetic unlock, mount unlock, or 10x score for 60 seconds).
    - Leaving zones stops score gain immediately.

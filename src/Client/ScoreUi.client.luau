@@ -78,7 +78,7 @@ rankNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 rankNameLabel.TextXAlignment = Enum.TextXAlignment.Left
 rankNameLabel.Font = Enum.Font.GothamBold
 rankNameLabel.TextSize = 18
-rankNameLabel.Text = 'Rank One'
+rankNameLabel.Text = 'Pebble Counter'
 rankNameLabel.Parent = rankPanel
 
 local rankProgressTrack = Instance.new('Frame')
@@ -109,7 +109,7 @@ rankProgressTextLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 rankProgressTextLabel.TextXAlignment = Enum.TextXAlignment.Left
 rankProgressTextLabel.Font = Enum.Font.Gotham
 rankProgressTextLabel.TextSize = 14
-rankProgressTextLabel.Text = '0 / 1,000 to Rank Two'
+rankProgressTextLabel.Text = '0 / 1,000 to Bead Keeper'
 rankProgressTextLabel.Parent = rankPanel
 
 local luckyChestPanel = Instance.new('Frame')
