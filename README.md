@@ -17,6 +17,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Grants every rank a unique aura style that ramps up in spectacle with stronger glow, denser particles, animated pulsing light, and scale growth as players climb toward max rank.
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
 - Shows an owner-only admin panel with buttons to multiply current score by `2x` or `10x`.
+- Adds a wooden world sign that shows the global all-time top scores (ordered DataStore best-score leaderboard).
 - Increments score while inside age zones, with each age granting a higher score-per-second multiplier.
 - Applies a rebirth multiplier to score gain (`max(Rebirths, 1)`), so `2` rebirths means `2x` score/sec.
 - Unlock requirements and score gains scale so each age takes roughly the same active time to complete while totals grow exponentially.
@@ -135,6 +136,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - You see a next-unlock tracker in the UI (example: `Next: Age of Brass at 600 (595 to go)`), which updates as your score increases.
    - You see a rank progression panel (`Rank One` initially) with a filling progress bar and progress text toward the next rank.
    - Whenever score increases, you see a brief floating popup with the compact increase amount (example: `+1.6k`) at a random position.
+   - You see a world leaderboard sign with the top global all-time scores (best score per player), refreshed automatically.
    - The rank title above each player's head updates automatically as score crosses rank thresholds.
    - Your avatar aura transforms every rank with unique colors, stronger particles/light pulses, and increased size at higher ranks.
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
