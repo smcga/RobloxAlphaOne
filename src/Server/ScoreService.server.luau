@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService('ReplicatedStorage')
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
 local AdminLogic = require(Shared:WaitForChild('AdminLogic'))
+local AuraLogic = require(Shared:WaitForChild('AuraLogic'))
 local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
@@ -16,6 +17,7 @@ type ZoneProgressionState = ZoneProgressionLogic.ZoneProgressionState
 
 type PlayerScoreState = {
     progressionState: ZoneProgressionState,
+    currentRankIndex: number,
     dirtyVersion: number,
     lastSavedVersion: number,
     lastSaveClock: number,
@@ -100,6 +102,132 @@ local function updateRankTitle(player: Player, score: number)
     rankLabel.Text = getRankNameForScore(score)
 end
 
+local function ensureRankAuraNodes(
+    player: Player
+): (Attachment?, ParticleEmitter?, ParticleEmitter?, PointLight?)
+    local character = player.Character
+    if not character then
+        return nil, nil, nil, nil
+    end
+
+    local rootPart = character:FindFirstChild('HumanoidRootPart')
+    if not rootPart or not rootPart:IsA('BasePart') then
+        return nil, nil, nil, nil
+    end
+
+    local auraAttachment = rootPart:FindFirstChild('RankAuraAttachment')
+    if not auraAttachment then
+        auraAttachment = Instance.new('Attachment')
+        auraAttachment.Name = 'RankAuraAttachment'
+        auraAttachment.Position = Vector3.new(0, -1.5, 0)
+        auraAttachment.Parent = rootPart
+    end
+
+    local primaryEmitter = auraAttachment:FindFirstChild('PrimaryAuraEmitter')
+    if not primaryEmitter then
+        primaryEmitter = Instance.new('ParticleEmitter')
+        primaryEmitter.Name = 'PrimaryAuraEmitter'
+        primaryEmitter.Shape = Enum.ParticleEmitterShape.Sphere
+        primaryEmitter.EmissionDirection = Enum.NormalId.Top
+        primaryEmitter.Rotation = NumberRange.new(0, 360)
+        primaryEmitter.RotSpeed = NumberRange.new(-40, 40)
+        primaryEmitter.Parent = auraAttachment
+    end
+
+    local secondaryEmitter = auraAttachment:FindFirstChild('SecondaryAuraEmitter')
+    if not secondaryEmitter then
+        secondaryEmitter = Instance.new('ParticleEmitter')
+        secondaryEmitter.Name = 'SecondaryAuraEmitter'
+        secondaryEmitter.Shape = Enum.ParticleEmitterShape.Sphere
+        secondaryEmitter.EmissionDirection = Enum.NormalId.Top
+        secondaryEmitter.Rotation = NumberRange.new(0, 360)
+        secondaryEmitter.RotSpeed = NumberRange.new(-120, 120)
+        secondaryEmitter.Parent = auraAttachment
+    end
+
+    local auraLight = auraAttachment:FindFirstChild('AuraLight')
+    if not auraLight then
+        auraLight = Instance.new('PointLight')
+        auraLight.Name = 'AuraLight'
+        auraLight.Parent = auraAttachment
+    end
+
+    return auraAttachment :: Attachment,
+        primaryEmitter :: ParticleEmitter,
+        secondaryEmitter :: ParticleEmitter,
+        auraLight :: PointLight
+end
+
+local function updateRankAura(player: Player, rankIndex: number, didRankIncrease: boolean)
+    local _, primaryEmitter, secondaryEmitter, auraLight = ensureRankAuraNodes(player)
+    if not primaryEmitter or not secondaryEmitter or not auraLight then
+        return
+    end
+
+    local auraConfig = AuraLogic.getAuraConfig(rankIndex, #Constants.RANK_CONFIGS)
+    local primaryColor =
+        Color3.fromHSV(auraConfig.primaryHue, auraConfig.primarySaturation, auraConfig.primaryValue)
+    local secondaryColor = Color3.fromHSV(
+        auraConfig.secondaryHue,
+        auraConfig.secondarySaturation,
+        auraConfig.secondaryValue
+    )
+
+    primaryEmitter.Color = ColorSequence.new(primaryColor, secondaryColor)
+    primaryEmitter.Rate = auraConfig.rate
+    primaryEmitter.Lifetime = NumberRange.new(auraConfig.lifetimeMin, auraConfig.lifetimeMax)
+    primaryEmitter.Speed = NumberRange.new(auraConfig.speedMin, auraConfig.speedMax)
+    primaryEmitter.SpreadAngle = Vector2.new(auraConfig.spread, auraConfig.spread)
+    primaryEmitter.LightEmission = auraConfig.lightEmission
+    primaryEmitter.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, auraConfig.sizeStart),
+        NumberSequenceKeypoint.new(0.7, auraConfig.sizeStart * 0.6),
+        NumberSequenceKeypoint.new(1, auraConfig.sizeEnd),
+    })
+    primaryEmitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.08),
+        NumberSequenceKeypoint.new(0.75, 0.45),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+
+    secondaryEmitter.Enabled = auraConfig.hasSecondaryBurst
+    secondaryEmitter.Color = ColorSequence.new(secondaryColor, primaryColor)
+    secondaryEmitter.Rate = auraConfig.secondaryRate
+    secondaryEmitter.Lifetime =
+        NumberRange.new(auraConfig.lifetimeMin * 0.6, auraConfig.lifetimeMax * 0.8)
+    secondaryEmitter.Speed = NumberRange.new(auraConfig.speedMin * 2.2, auraConfig.speedMax * 2.8)
+    secondaryEmitter.SpreadAngle = Vector2.new(auraConfig.spread * 1.2, auraConfig.spread * 1.2)
+    secondaryEmitter.LightEmission = math.min(auraConfig.lightEmission + 0.05, 1)
+    secondaryEmitter.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, auraConfig.sizeStart * 0.35),
+        NumberSequenceKeypoint.new(1, auraConfig.sizeEnd * 0.2),
+    })
+    secondaryEmitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.2),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+
+    auraLight.Color = primaryColor:Lerp(secondaryColor, 0.35)
+    auraLight.Brightness = auraConfig.lightBrightness
+    auraLight.Range = auraConfig.lightRange
+
+    if didRankIncrease then
+        local burstAmount = math.max(10, math.floor(16 + (rankIndex * 0.4)))
+        primaryEmitter:Emit(burstAmount)
+
+        if auraConfig.hasSecondaryBurst then
+            secondaryEmitter:Emit(math.floor(burstAmount * 0.85))
+        end
+    end
+end
+
+local function updateRankPresentation(player: Player, score: number, previousRankIndex: number?)
+    local rankIndex = RankProgressionLogic.getCurrentRankIndex(score, Constants.RANK_CONFIGS)
+    updateRankTitle(player, score)
+    updateRankAura(player, rankIndex, previousRankIndex ~= nil and rankIndex > previousRankIndex)
+    return rankIndex
+end
+
 local function pushIsAdmin(player: Player, isAdmin: boolean)
     adminStateUpdatedEvent:FireClient(player, isAdmin)
 end
@@ -109,8 +237,11 @@ local function isPlayerAdmin(player: Player): boolean
 end
 
 local function createPlayerState(score: number, rebirths: number): PlayerScoreState
+    local initialRankIndex = RankProgressionLogic.getCurrentRankIndex(score, Constants.RANK_CONFIGS)
+
     return {
         progressionState = ZoneProgressionLogic.newState(score, rebirths),
+        currentRankIndex = initialRankIndex,
         dirtyVersion = 0,
         lastSavedVersion = 0,
         lastSaveClock = os.clock(),
@@ -189,7 +320,7 @@ local function initializePlayerState(player: Player)
     playerStates[player] = state
 
     pushScore(player, state.progressionState.score, state.progressionState.rebirths)
-    updateRankTitle(player, state.progressionState.score)
+    state.currentRankIndex = updateRankPresentation(player, state.progressionState.score, nil)
     pushIsAdmin(player, isPlayerAdmin(player))
 
     player.CharacterAdded:Connect(function()
@@ -200,7 +331,8 @@ local function initializePlayerState(player: Player)
                 currentState.progressionState.score,
                 currentState.progressionState.rebirths
             )
-            updateRankTitle(player, currentState.progressionState.score)
+            currentState.currentRankIndex =
+                updateRankPresentation(player, currentState.progressionState.score, nil)
         end
     end)
 end
@@ -227,7 +359,8 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
     progressionState.score = AdminLogic.applyScoreMultiplier(progressionState.score, multiplier)
 
     pushScore(player, progressionState.score, progressionState.rebirths)
-    updateRankTitle(player, progressionState.score)
+    state.currentRankIndex =
+        updateRankPresentation(player, progressionState.score, state.currentRankIndex)
     markDirty(state)
     savePlayerState(player, false)
 end)
@@ -296,7 +429,8 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             or tickResult.state.rebirths ~= state.progressionState.rebirths
         then
             pushScore(player, tickResult.state.score, tickResult.state.rebirths)
-            updateRankTitle(player, tickResult.state.score)
+            state.currentRankIndex =
+                updateRankPresentation(player, tickResult.state.score, state.currentRankIndex)
             markDirty(state)
             savePlayerState(player, false)
         end
