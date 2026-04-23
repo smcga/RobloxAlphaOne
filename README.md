@@ -118,7 +118,11 @@ This captures decor from:
 
 and writes the generated module source directly into `ReplicatedStorage.Shared.WorldLayout.Source`, so Rojo can sync the change back to `src/Shared/WorldLayout.luau` without manual paste.
 
-6. (Optional, one-click plugin) A Studio plugin scaffold is included at `studio/WorldLayoutSync.plugin.lua`. Install it as a local plugin, then click **World Layout -> Sync Layout** to build + sync in one step.
+6. (Optional, one-click plugin) A Studio plugin scaffold is included at `studio/WorldLayoutSync.plugin.lua`. Install it as a local plugin for a load/save-style round trip:
+   - **World Layout -> Import World** loads from code (`Shared.WorldLayout`) into `Workspace` (load).
+   - **World Layout -> Export World** writes current `Workspace` decor back into `Shared.WorldLayout` (save).
+
+   Both actions print explicit success/failure messages in Studio output. Export failures include the underlying error so you can quickly fix missing folders, missing module wiring, or invalid decor setup.
 
 7. Start Play mode.
 8. Verify expected MVP behavior:
