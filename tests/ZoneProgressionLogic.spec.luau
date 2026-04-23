@@ -72,6 +72,18 @@ runCase('rebirth count multiplies score gain per tick', function()
     expectEqual(result.state.score, 2, 'two rebirths should double zone score gain')
 end)
 
+runCase('bonus score multiplier from lucky chest stacks with rebirth multiplier', function()
+    local result = tick(ZoneProgressionLogic.newState(0, 2), {
+        isInsideAgeZones = {
+            true,
+            false,
+            false,
+        },
+        bonusScoreMultiplier = 10,
+    })
+
+    expectEqual(result.state.score, 20, '2 rebirths and 10x boost should multiply zone gain')
+end)
 runCase('entering rebirth zone resets score and awards rebirths', function()
     local result = tick(ZoneProgressionLogic.newState(2100, 3), {
         isInsideRebirthZone = true,

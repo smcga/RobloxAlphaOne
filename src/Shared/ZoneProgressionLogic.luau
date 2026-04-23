@@ -19,6 +19,7 @@ export type ZoneProgressionInput = {
     scoreIntervalSeconds: number,
     isInsideRebirthZone: boolean,
     rebirthScoreDivisor: number,
+    bonusScoreMultiplier: number?,
 }
 
 export type ZoneProgressionResult = {
@@ -43,7 +44,7 @@ function ZoneProgressionLogic.tick(
     state: ZoneProgressionState,
     input: ZoneProgressionInput
 ): ZoneProgressionResult
-    local scoreMultiplier = math.max(state.rebirths, 1)
+    local scoreMultiplier = math.max(state.rebirths, 1) * (input.bonusScoreMultiplier or 1)
     local score = state.score
     local ageAccumulatorSeconds = {}
     local zoneCount = #input.ageZoneConfigs

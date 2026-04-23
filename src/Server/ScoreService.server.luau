@@ -4,8 +4,9 @@ local RunService = game:GetService('RunService')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
-local Constants = require(Shared:WaitForChild('Constants'))
 local AdminLogic = require(Shared:WaitForChild('AdminLogic'))
+local Constants = require(Shared:WaitForChild('Constants'))
+local LuckyChestLogic = require(Shared:WaitForChild('LuckyChestLogic'))
 local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
@@ -13,9 +14,11 @@ local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
 local ZoneProgressionLogic = require(Shared:WaitForChild('ZoneProgressionLogic'))
 
 type ZoneProgressionState = ZoneProgressionLogic.ZoneProgressionState
+type ProfileData = ProfileDataLogic.ProfileData
 
 type PlayerScoreState = {
     progressionState: ZoneProgressionState,
+    profileData: ProfileData,
     dirtyVersion: number,
     lastSavedVersion: number,
     lastSaveClock: number,
@@ -24,6 +27,10 @@ type PlayerScoreState = {
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
 local adminScoreMultiplyRequestEvent = Remotes.getOrCreateAdminScoreMultiplyRequestEvent()
 local adminStateUpdatedEvent = Remotes.getOrCreateAdminStateUpdatedEvent()
+local luckyChestStatusUpdatedEvent = Remotes.getOrCreateLuckyChestStatusUpdatedEvent()
+local luckyChestOpenRequestEvent = Remotes.getOrCreateLuckyChestOpenRequestEvent()
+local luckyChestOpenedEvent = Remotes.getOrCreateLuckyChestOpenedEvent()
+
 local playerStates: { [Player]: PlayerScoreState } = {}
 local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
 
@@ -47,6 +54,17 @@ end
 
 local function pushScore(player: Player, score: number, rebirths: number)
     scoreUpdatedEvent:FireClient(player, score, rebirths)
+end
+
+local function pushLuckyChestStatus(player: Player, profileData: ProfileData)
+    luckyChestStatusUpdatedEvent:FireClient(
+        player,
+        profileData.nextLuckyChestOpenAt,
+        profileData.scoreBoostExpiresAt,
+        profileData.unlockedHats,
+        profileData.unlockedPets,
+        profileData.unlockedVehicleMounts
+    )
 end
 
 local function getRankNameForScore(score: number): string
@@ -108,9 +126,10 @@ local function isPlayerAdmin(player: Player): boolean
     return game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId
 end
 
-local function createPlayerState(score: number, rebirths: number): PlayerScoreState
+local function createPlayerState(profileData: ProfileData): PlayerScoreState
     return {
-        progressionState = ZoneProgressionLogic.newState(score, rebirths),
+        progressionState = ZoneProgressionLogic.newState(profileData.score, profileData.rebirths),
+        profileData = profileData,
         dirtyVersion = 0,
         lastSavedVersion = 0,
         lastSaveClock = os.clock(),
@@ -118,10 +137,7 @@ local function createPlayerState(score: number, rebirths: number): PlayerScoreSt
 end
 
 local function loadPlayerState(player: Player): PlayerScoreState
-    local playerData = {
-        score = 0,
-        rebirths = 0,
-    }
+    local playerData = ProfileDataLogic.normalize(nil)
 
     local success, result = pcall(function()
         return scoreStore:GetAsync(getPlayerDataStoreKey(player))
@@ -133,7 +149,12 @@ local function loadPlayerState(player: Player): PlayerScoreState
         warn(string.format('Failed to load score data for %s: %s', player.Name, tostring(result)))
     end
 
-    return createPlayerState(playerData.score, playerData.rebirths)
+    return createPlayerState(playerData)
+end
+
+local function syncProfileWithProgression(state: PlayerScoreState)
+    state.profileData.score = state.progressionState.score
+    state.profileData.rebirths = state.progressionState.rebirths
 end
 
 local function savePlayerState(player: Player, force: boolean)
@@ -151,9 +172,10 @@ local function savePlayerState(player: Player, force: boolean)
         return
     end
 
+    syncProfileWithProgression(state)
+
     local captureVersion = state.dirtyVersion
-    local scoreToSave = state.progressionState.score
-    local rebirthsToSave = state.progressionState.rebirths
+    local profileToSave = state.profileData
 
     state.lastSaveClock = now
 
@@ -161,10 +183,7 @@ local function savePlayerState(player: Player, force: boolean)
         local success, err = pcall(function()
             scoreStore:SetAsync(
                 getPlayerDataStoreKey(player),
-                ProfileDataLogic.toStoredValue({
-                    score = scoreToSave,
-                    rebirths = rebirthsToSave,
-                })
+                ProfileDataLogic.toStoredValue(profileToSave)
             )
         end)
 
@@ -189,6 +208,7 @@ local function initializePlayerState(player: Player)
     playerStates[player] = state
 
     pushScore(player, state.progressionState.score, state.progressionState.rebirths)
+    pushLuckyChestStatus(player, state.profileData)
     updateRankTitle(player, state.progressionState.score)
     pushIsAdmin(player, isPlayerAdmin(player))
 
@@ -200,6 +220,7 @@ local function initializePlayerState(player: Player)
                 currentState.progressionState.score,
                 currentState.progressionState.rebirths
             )
+            pushLuckyChestStatus(player, currentState.profileData)
             updateRankTitle(player, currentState.progressionState.score)
         end
     end)
@@ -228,6 +249,49 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
 
     pushScore(player, progressionState.score, progressionState.rebirths)
     updateRankTitle(player, progressionState.score)
+    markDirty(state)
+    savePlayerState(player, false)
+end)
+
+luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    local now = os.time()
+    local spinResult = LuckyChestLogic.applyChestSpin(
+        state.profileData,
+        state.progressionState.score,
+        state.progressionState.rebirths,
+        now,
+        Constants.LUCKY_CHEST_COOLDOWN_SECONDS,
+        Constants.LUCKY_CHEST_SCORE_BOOST_DURATION_SECONDS,
+        function()
+            return Random.new():NextNumber()
+        end
+    )
+
+    if not spinResult then
+        pushLuckyChestStatus(player, state.profileData)
+        return
+    end
+
+    state.profileData = spinResult.profileData
+    state.progressionState.score = spinResult.score
+    state.progressionState.rebirths = spinResult.rebirths
+
+    pushScore(player, state.progressionState.score, state.progressionState.rebirths)
+    updateRankTitle(player, state.progressionState.score)
+    pushLuckyChestStatus(player, state.profileData)
+
+    luckyChestOpenedEvent:FireClient(
+        player,
+        spinResult.spinResult,
+        state.profileData.nextLuckyChestOpenAt,
+        state.profileData.scoreBoostExpiresAt
+    )
+
     markDirty(state)
     savePlayerState(player, false)
 end)
@@ -282,6 +346,12 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             }
         end
 
+        local boostedMultiplier = LuckyChestLogic.getActiveScoreBoostMultiplier(
+            state.profileData,
+            os.time(),
+            Constants.LUCKY_CHEST_SCORE_BOOST_MULTIPLIER
+        )
+
         local tickResult = ZoneProgressionLogic.tick(state.progressionState, {
             deltaSeconds = deltaSeconds,
             isInsideAgeZones = isInsideAgeZones,
@@ -289,6 +359,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             scoreIntervalSeconds = Constants.SCORE_INTERVAL_SECONDS,
             isInsideRebirthZone = isInsideRebirthZone,
             rebirthScoreDivisor = Constants.REBIRTH_SCORE_DIVISOR,
+            bonusScoreMultiplier = boostedMultiplier,
         })
 
         if
