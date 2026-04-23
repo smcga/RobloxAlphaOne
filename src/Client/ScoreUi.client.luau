@@ -14,6 +14,14 @@ local Remotes = require(Shared:WaitForChild('Remotes'))
 local ScorePopupLogic = require(Shared:WaitForChild('ScorePopupLogic'))
 local ZoneUnlockUiLogic = require(Shared:WaitForChild('ZoneUnlockUiLogic'))
 
+local RARITY_COLORS = {
+    green = Color3.fromRGB(126, 211, 122),
+    blue = Color3.fromRGB(87, 174, 255),
+    purple = Color3.fromRGB(188, 126, 255),
+    orange = Color3.fromRGB(255, 166, 87),
+    gold = Color3.fromRGB(255, 222, 89),
+}
+
 local screenGui = Instance.new('ScreenGui')
 screenGui.Name = 'ScoreGui'
 screenGui.ResetOnSpawn = false
@@ -104,6 +112,103 @@ rankProgressTextLabel.TextSize = 14
 rankProgressTextLabel.Text = '0 / 1,000 to Bead Keeper'
 rankProgressTextLabel.Parent = rankPanel
 
+local luckyChestPanel = Instance.new('Frame')
+luckyChestPanel.Name = 'LuckyChestPanel'
+luckyChestPanel.Size = UDim2.fromOffset(320, 108)
+luckyChestPanel.Position = UDim2.new(1, -336, 0, 16)
+luckyChestPanel.BackgroundTransparency = 0.22
+luckyChestPanel.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
+luckyChestPanel.Parent = screenGui
+
+local luckyPanelCorner = corner:Clone()
+luckyPanelCorner.Parent = luckyChestPanel
+
+local luckyChestTitle = Instance.new('TextLabel')
+luckyChestTitle.Name = 'LuckyChestTitle'
+luckyChestTitle.Size = UDim2.fromOffset(288, 28)
+luckyChestTitle.Position = UDim2.fromOffset(16, 8)
+luckyChestTitle.BackgroundTransparency = 1
+luckyChestTitle.Text = 'Lucky Chest'
+luckyChestTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+luckyChestTitle.Font = Enum.Font.GothamBold
+luckyChestTitle.TextXAlignment = Enum.TextXAlignment.Left
+luckyChestTitle.TextSize = 20
+luckyChestTitle.Parent = luckyChestPanel
+
+local luckyChestCooldownLabel = Instance.new('TextLabel')
+luckyChestCooldownLabel.Name = 'LuckyChestCooldownLabel'
+luckyChestCooldownLabel.Size = UDim2.fromOffset(288, 20)
+luckyChestCooldownLabel.Position = UDim2.fromOffset(16, 34)
+luckyChestCooldownLabel.BackgroundTransparency = 1
+luckyChestCooldownLabel.Text = 'Next chest: ready now!'
+luckyChestCooldownLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+luckyChestCooldownLabel.Font = Enum.Font.Gotham
+luckyChestCooldownLabel.TextXAlignment = Enum.TextXAlignment.Left
+luckyChestCooldownLabel.TextSize = 14
+luckyChestCooldownLabel.Parent = luckyChestPanel
+
+local luckyChestButton = Instance.new('TextButton')
+luckyChestButton.Name = 'LuckyChestButton'
+luckyChestButton.Size = UDim2.fromOffset(288, 40)
+luckyChestButton.Position = UDim2.fromOffset(16, 60)
+luckyChestButton.BackgroundColor3 = Color3.fromRGB(53, 103, 62)
+luckyChestButton.Text = 'Open Lucky Chest'
+luckyChestButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+luckyChestButton.Font = Enum.Font.GothamBold
+luckyChestButton.TextSize = 16
+luckyChestButton.Parent = luckyChestPanel
+
+local luckyButtonCorner = corner:Clone()
+luckyButtonCorner.Parent = luckyChestButton
+
+local chestSpinOverlay = Instance.new('Frame')
+chestSpinOverlay.Name = 'ChestSpinOverlay'
+chestSpinOverlay.Size = UDim2.fromScale(1, 1)
+chestSpinOverlay.BackgroundColor3 = Color3.fromRGB(5, 8, 12)
+chestSpinOverlay.BackgroundTransparency = 1
+chestSpinOverlay.Visible = false
+chestSpinOverlay.Parent = screenGui
+
+local chestCenterPanel = Instance.new('Frame')
+chestCenterPanel.Name = 'ChestCenterPanel'
+chestCenterPanel.Size = UDim2.fromOffset(580, 260)
+chestCenterPanel.AnchorPoint = Vector2.new(0.5, 0.5)
+chestCenterPanel.Position = UDim2.fromScale(0.5, 0.5)
+chestCenterPanel.BackgroundTransparency = 0.18
+chestCenterPanel.BackgroundColor3 = Color3.fromRGB(18, 22, 30)
+chestCenterPanel.Parent = chestSpinOverlay
+
+local chestCenterCorner = corner:Clone()
+chestCenterCorner.Parent = chestCenterPanel
+
+local chestCategoryLabel = Instance.new('TextLabel')
+chestCategoryLabel.Name = 'ChestCategoryLabel'
+chestCategoryLabel.Size = UDim2.fromOffset(548, 44)
+chestCategoryLabel.Position = UDim2.fromOffset(16, 16)
+chestCategoryLabel.BackgroundTransparency = 1
+chestCategoryLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+chestCategoryLabel.Font = Enum.Font.GothamBold
+chestCategoryLabel.TextSize = 32
+chestCategoryLabel.Text = 'Spinning category...'
+chestCategoryLabel.Parent = chestCenterPanel
+
+local chestItemLabel = chestCategoryLabel:Clone()
+chestItemLabel.Name = 'ChestItemLabel'
+chestItemLabel.Position = UDim2.fromOffset(16, 72)
+chestItemLabel.Text = 'Spinning reward...'
+chestItemLabel.Parent = chestCenterPanel
+
+local chestRewardLabel = chestCategoryLabel:Clone()
+chestRewardLabel.Name = 'ChestRewardLabel'
+chestRewardLabel.Position = UDim2.fromOffset(16, 150)
+chestRewardLabel.TextSize = 28
+chestRewardLabel.Text = ''
+chestRewardLabel.Parent = chestCenterPanel
+
+local nextLuckyChestOpenAt = 0
+local isChestSpinPlaying = false
+local previousScore: number? = nil
+
 local function updateAgeZoneLabelVisibility(score: number)
     for _, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
         local zone = workspace:FindFirstChild(zoneConfig.zoneName)
@@ -193,9 +298,115 @@ local function showScoreIncreasePopup(increase: number)
     floatTween:Play()
 end
 
+local function formatCountdown(seconds: number): string
+    local wholeSeconds = math.max(math.floor(seconds), 0)
+    local minutes = math.floor(wholeSeconds / 60)
+    local remainingSeconds = wholeSeconds % 60
+    return string.format('%02d:%02d', minutes, remainingSeconds)
+end
+
+local function updateLuckyChestUi()
+    local now = os.time()
+    local remaining = nextLuckyChestOpenAt - now
+    local ready = remaining <= 0
+
+    luckyChestCooldownLabel.Text = ready and 'Next chest: ready now!'
+        or string.format('Next chest in: %s', formatCountdown(remaining))
+    luckyChestButton.Active = ready and not isChestSpinPlaying
+    luckyChestButton.AutoButtonColor = ready and not isChestSpinPlaying
+    luckyChestButton.BackgroundColor3 = ready and Color3.fromRGB(53, 103, 62)
+        or Color3.fromRGB(63, 63, 63)
+end
+
+local function animateSpinLabel(label: TextLabel, options, finalName: string, finalRarity: string)
+    for _ = 1, 12 do
+        local option = options[math.random(1, #options)]
+        label.Text = option.displayName
+        label.TextColor3 = RARITY_COLORS[option.rarity] or Color3.fromRGB(255, 255, 255)
+        task.wait(0.06)
+    end
+
+    label.Text = finalName
+    label.TextColor3 = RARITY_COLORS[finalRarity] or Color3.fromRGB(255, 255, 255)
+end
+
+local function playChestSpinVisual(spinResult)
+    isChestSpinPlaying = true
+    updateLuckyChestUi()
+
+    chestSpinOverlay.Visible = true
+    chestSpinOverlay.BackgroundTransparency = 1
+    chestRewardLabel.Text = ''
+
+    TweenService:Create(
+        chestSpinOverlay,
+        TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { BackgroundTransparency = 0.35 }
+    ):Play()
+
+    chestCategoryLabel.Text = 'Spinning category...'
+    chestCategoryLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    chestItemLabel.Text = 'Spinning reward...'
+    chestItemLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    animateSpinLabel(
+        chestCategoryLabel,
+        spinResult.categorySpinOptions,
+        spinResult.categoryDisplayName,
+        spinResult.categoryRarity
+    )
+
+    task.wait(0.2)
+
+    animateSpinLabel(
+        chestItemLabel,
+        spinResult.itemSpinOptions,
+        spinResult.item.displayName,
+        spinResult.item.rarity
+    )
+
+    if spinResult.scoreBoostMultiplier > 1 then
+        chestRewardLabel.Text = string.format(
+            'Reward: %sx score for %ss!',
+            tostring(spinResult.scoreBoostMultiplier),
+            tostring(spinResult.scoreBoostDurationSeconds)
+        )
+    elseif spinResult.scoreGranted > 0 then
+        chestRewardLabel.Text =
+            string.format('Reward: +%s Score', NumberFormat.formatCompact(spinResult.scoreGranted))
+    elseif spinResult.rebirthsGranted > 0 then
+        chestRewardLabel.Text = string.format(
+            'Reward: +%s Rebirths',
+            NumberFormat.formatCompact(spinResult.rebirthsGranted)
+        )
+    else
+        chestRewardLabel.Text = string.format('Reward: %s unlocked!', spinResult.item.displayName)
+    end
+
+    chestRewardLabel.TextColor3 = RARITY_COLORS[spinResult.item.rarity]
+        or Color3.fromRGB(255, 255, 255)
+
+    task.wait(2)
+
+    local fade = TweenService:Create(
+        chestSpinOverlay,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        { BackgroundTransparency = 1 }
+    )
+    fade:Play()
+    fade.Completed:Wait()
+
+    chestSpinOverlay.Visible = false
+    isChestSpinPlaying = false
+    updateLuckyChestUi()
+end
+
 local scoreUpdatedEvent = Remotes.waitForScoreUpdatedEvent()
 local adminScoreMultiplyRequestEvent = Remotes.waitForAdminScoreMultiplyRequestEvent()
 local adminStateUpdatedEvent = Remotes.waitForAdminStateUpdatedEvent()
+local luckyChestStatusUpdatedEvent = Remotes.waitForLuckyChestStatusUpdatedEvent()
+local luckyChestOpenRequestEvent = Remotes.waitForLuckyChestOpenRequestEvent()
+local luckyChestOpenedEvent = Remotes.waitForLuckyChestOpenedEvent()
 
 local adminPanel = Instance.new('Frame')
 adminPanel.Name = 'AdminPanel'
@@ -247,7 +458,13 @@ for index, multiplier in ipairs(Constants.ADMIN_SCORE_MULTIPLIERS) do
     createMultiplierButton(multiplier, index)
 end
 
-local previousScore: number? = nil
+luckyChestButton.Activated:Connect(function()
+    if isChestSpinPlaying then
+        return
+    end
+
+    luckyChestOpenRequestEvent:FireServer()
+end)
 
 scoreUpdatedEvent.OnClientEvent:Connect(function(score: number, rebirths: number)
     local increase = ScorePopupLogic.getPositiveIncrease(previousScore, score)
@@ -261,4 +478,23 @@ end)
 
 adminStateUpdatedEvent.OnClientEvent:Connect(function(isAdmin: boolean)
     adminPanel.Visible = isAdmin
+end)
+
+luckyChestStatusUpdatedEvent.OnClientEvent:Connect(function(serverNextLuckyChestOpenAt: number)
+    nextLuckyChestOpenAt = serverNextLuckyChestOpenAt
+    updateLuckyChestUi()
+end)
+
+luckyChestOpenedEvent.OnClientEvent:Connect(function(spinResult, serverNextLuckyChestOpenAt: number)
+    nextLuckyChestOpenAt = serverNextLuckyChestOpenAt
+    task.spawn(function()
+        playChestSpinVisual(spinResult)
+    end)
+end)
+
+task.spawn(function()
+    while true do
+        updateLuckyChestUi()
+        task.wait(1)
+    end
 end)

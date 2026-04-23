@@ -23,6 +23,8 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Entering the glowing `Rebirth` zone converts score into rebirths (`+1` per `1000` score) and resets score to `0`.
 - Entering a locked age zone before meeting its score requirement now flings the player away, kills them, plays a global death SFX, and bursts a cloud of `Nope!` text particles.
 - Stops score gain immediately when leaving each zone.
+- Adds a server-authoritative Lucky Chest system: once every 5 minutes players can open a chest that spins category then reward item with green/blue/purple/orange/gold rarity odds and can grant score, rebirths, hats, pets, vehicle mounts, or a 1-minute 10x score boost.
+- Shows a timed Lucky Chest UI panel and a full-screen animated spin reveal for category and reward rarity each time the chest is opened.
 - Keeps score server-authoritative and persistent across death/rejoin with Roblox DataStore.
 
 ## Project structure
@@ -144,6 +146,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - Entering a still-locked age zone flings you away, then kills you, while preserving your existing score/rebirth totals.
    - Locked-zone deaths play a shared SFX for everyone and spawn flying `Nope!` text particles around the punished player.
    - If you're the game owner, admin panel buttons can multiply your current score by `2x` or `10x`.
+   - Every 5 minutes, opening the Lucky Chest plays a two-stage spin animation and grants one rarity-based reward (score, rebirths, cosmetic unlock, mount unlock, or 10x score for 60 seconds).
    - Leaving zones stops score gain immediately.
 
 ### 7) Daily workflow (recommended)
