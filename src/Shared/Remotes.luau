@@ -5,6 +5,7 @@ local Remotes = {}
 Remotes.FOLDER_NAME = 'Remotes'
 Remotes.SCORE_UPDATED_EVENT = 'ScoreUpdated'
 Remotes.ADMIN_SCORE_MULTIPLY_REQUEST_EVENT = 'AdminScoreMultiplyRequest'
+Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT = 'AdminResetProgressRequest'
 Remotes.ADMIN_STATE_UPDATED_EVENT = 'AdminStateUpdated'
 Remotes.LUCKY_CHEST_STATUS_UPDATED_EVENT = 'LuckyChestStatusUpdated'
 Remotes.LUCKY_CHEST_OPEN_REQUEST_EVENT = 'LuckyChestOpenRequest'
@@ -53,6 +54,30 @@ end
 
 function Remotes.waitForAdminScoreMultiplyRequestEvent(): RemoteEvent
     return waitForRemoteEvent(Remotes.ADMIN_SCORE_MULTIPLY_REQUEST_EVENT)
+end
+
+function Remotes.getOrCreateAdminResetProgressRequestEvent(): RemoteEvent
+    local folder = ReplicatedStorage:FindFirstChild(Remotes.FOLDER_NAME)
+    if not folder then
+        folder = Instance.new('Folder')
+        folder.Name = Remotes.FOLDER_NAME
+        folder.Parent = ReplicatedStorage
+    end
+
+    local event = folder:FindFirstChild(Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT)
+    if not event then
+        event = Instance.new('RemoteEvent')
+        event.Name = Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT
+        event.Parent = folder
+    end
+
+    return event :: RemoteEvent
+end
+
+function Remotes.waitForAdminResetProgressRequestEvent(): RemoteEvent
+    local folder = ReplicatedStorage:WaitForChild(Remotes.FOLDER_NAME)
+    local event = folder:WaitForChild(Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT)
+    return event :: RemoteEvent
 end
 
 function Remotes.getOrCreateAdminStateUpdatedEvent(): RemoteEvent

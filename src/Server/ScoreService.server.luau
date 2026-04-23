@@ -33,6 +33,7 @@ type PlayerScoreState = {
 
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
 local adminScoreMultiplyRequestEvent = Remotes.getOrCreateAdminScoreMultiplyRequestEvent()
+local adminResetProgressRequestEvent = Remotes.getOrCreateAdminResetProgressRequestEvent()
 local adminStateUpdatedEvent = Remotes.getOrCreateAdminStateUpdatedEvent()
 local luckyChestStatusUpdatedEvent = Remotes.getOrCreateLuckyChestStatusUpdatedEvent()
 local luckyChestOpenRequestEvent = Remotes.getOrCreateLuckyChestOpenRequestEvent()
@@ -561,6 +562,22 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
     savePlayerState(player, false)
 end)
 
+adminResetProgressRequestEvent.OnServerEvent:Connect(function(player: Player)
+    if not isPlayerAdmin(player) then
+        return
+    end
+
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    local progressionState = state.progressionState
+    progressionState.score, progressionState.rebirths = AdminLogic.resetScoreAndRebirths()
+
+    pushScore(player, progressionState.score, progressionState.rebirths)
+    updateRankTitle(player, progressionState.score)
+    updateRankAura(player, state)
 luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
     local state = playerStates[player]
     if not state then
