@@ -46,6 +46,28 @@ local function applyDecorShape(part: Part, shapeName: WorldDecorLogic.DecorShape
     end
 end
 
+local function ensureGeneratedWorldRoot(workspaceRoot: Instance): Folder
+    local existing = workspaceRoot:FindFirstChild('GeneratedWorld')
+    if existing and existing:IsA('Folder') then
+        return existing
+    end
+
+    if existing then
+        existing:Destroy()
+    end
+
+    local folder = Instance.new('Folder')
+    folder.Name = 'GeneratedWorld'
+    folder.Parent = workspaceRoot
+    return folder
+end
+
+local function applyGeneratedAttributes(instance: Instance, specId: string, specKind: string)
+    instance:SetAttribute('Generated', true)
+    instance:SetAttribute('WorldId', specId)
+    instance:SetAttribute('WorldKind', specKind)
+end
+
 local function getFirstPlaceableChild(container: Instance): Instance?
     for _, child in container:GetChildren() do
         if child:IsA('Model') then
@@ -183,6 +205,7 @@ local function ensurePartDecor(parent: Instance, spec: WorldDecorLogic.PartDecor
     part.Transparency = spec.transparency or 0
     part.CanCollide = true
     applyDecorShape(part, spec.shape)
+    applyGeneratedAttributes(part, spec.id, spec.kind)
 end
 
 local function getFallbackPartName(specName: string): string
@@ -259,10 +282,15 @@ local function ensureAssetDecor(parent: Instance, spec: WorldDecorLogic.AssetDec
     end
 
     local targetCFrame = toCFrame(spec.position, spec.rotation)
+    applyGeneratedAttributes(target, spec.id, spec.kind)
+    target:SetAttribute('WorldAssetId', spec.assetId)
 
     if target:IsA('Model') then
         if spec.scale then
             target:ScaleTo(spec.scale)
+            target:SetAttribute('WorldScale', spec.scale)
+        else
+            target:SetAttribute('WorldScale', nil)
         end
 
         anchorModel(target)
@@ -274,15 +302,26 @@ local function ensureAssetDecor(parent: Instance, spec: WorldDecorLogic.AssetDec
     target.Anchored = true
     target.CanCollide = true
     target.CFrame = targetCFrame
+    if spec.scale then
+        target:SetAttribute('WorldScale', spec.scale)
+    else
+        target:SetAttribute('WorldScale', nil)
+    end
     clearAssetFallbackPart(parent, spec.name)
 end
 
 local function ensureWorldDecor(workspaceRoot: Instance)
-    local decorFolder = workspaceRoot:FindFirstChild('WorldDecor')
+    local generatedWorld = ensureGeneratedWorldRoot(workspaceRoot)
+
+    local decorFolder = generatedWorld:FindFirstChild('WorldDecor')
     if not decorFolder or not decorFolder:IsA('Folder') then
+        if decorFolder then
+            decorFolder:Destroy()
+        end
+
         decorFolder = Instance.new('Folder')
         decorFolder.Name = 'WorldDecor'
-        decorFolder.Parent = workspaceRoot
+        decorFolder.Parent = generatedWorld
     end
 
     for _, spec in WorldDecorLogic.getDecorSpecs() do
