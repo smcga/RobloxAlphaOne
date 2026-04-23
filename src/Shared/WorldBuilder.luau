@@ -1,5 +1,6 @@
 local InsertService = game:GetService('InsertService')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local SoundService = game:GetService('SoundService')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
@@ -385,7 +386,7 @@ local function ensureZone(
     return zone
 end
 
-local function ensureZoneLabel(zone: BasePart, text: string)
+local function ensureZoneLabel(zone: BasePart, text: string, isVisible: boolean)
     local existing = zone:FindFirstChild('ZoneBillboard')
     local billboardGui: BillboardGui
     if existing and existing:IsA('BillboardGui') then
@@ -403,6 +404,7 @@ local function ensureZoneLabel(zone: BasePart, text: string)
     billboardGui.AlwaysOnTop = true
     billboardGui.Size = UDim2.fromOffset(220, 64)
     billboardGui.StudsOffset = Vector3.new(0, 6, 0)
+    billboardGui.Enabled = isVisible
 
     local existingLabel = billboardGui:FindFirstChild('ZoneLabel')
     local label: TextLabel
@@ -427,9 +429,66 @@ local function ensureZoneLabel(zone: BasePart, text: string)
     label.Text = text
 end
 
+local function ensureAgeOfBeadsSpawn(workspaceRoot: Instance)
+    local beadsConfig = Constants.AGE_ZONE_CONFIGS[1]
+    if not beadsConfig then
+        return
+    end
+
+    local spawnPosition = beadsConfig.center + Constants.SPAWN_LOCATION_OFFSET
+    local existing = workspaceRoot:FindFirstChild(Constants.SPAWN_LOCATION_NAME)
+    local spawnLocation: SpawnLocation
+
+    if existing and existing:IsA('SpawnLocation') then
+        spawnLocation = existing
+    else
+        if existing then
+            existing:Destroy()
+        end
+
+        spawnLocation = Instance.new('SpawnLocation')
+        spawnLocation.Name = Constants.SPAWN_LOCATION_NAME
+        spawnLocation.Parent = workspaceRoot
+    end
+
+    spawnLocation.Size = Constants.SPAWN_LOCATION_SIZE
+    spawnLocation.Position = spawnPosition
+    spawnLocation.Anchored = true
+    spawnLocation.Neutral = true
+    spawnLocation.CanCollide = true
+    spawnLocation.Transparency = 1
+end
+
+local function ensureBackgroundMusic()
+    local existing = SoundService:FindFirstChild(Constants.BACKGROUND_MUSIC_NAME)
+    local sound: Sound
+
+    if existing and existing:IsA('Sound') then
+        sound = existing
+    else
+        if existing then
+            existing:Destroy()
+        end
+
+        sound = Instance.new('Sound')
+        sound.Name = Constants.BACKGROUND_MUSIC_NAME
+        sound.Parent = SoundService
+    end
+
+    sound.SoundId = Constants.BACKGROUND_MUSIC_SOUND_ID
+    sound.Volume = Constants.BACKGROUND_MUSIC_VOLUME
+    sound.Looped = true
+
+    if not sound.IsPlaying then
+        sound:Play()
+    end
+end
+
 function WorldBuilder.build(workspaceRoot: Instance)
     ensureBaseplate(workspaceRoot)
     ensureWorldDecor(workspaceRoot)
+    ensureAgeOfBeadsSpawn(workspaceRoot)
+    ensureBackgroundMusic()
 
     local obsoleteZoneNames = {
         'ScoreZone',
@@ -454,7 +513,9 @@ function WorldBuilder.build(workspaceRoot: Instance)
             zoneConfig.color,
             zoneConfig.outlineColor
         )
-        ensureZoneLabel(zone, zoneConfig.displayName)
+        zone:SetAttribute('RequiredScore', zoneConfig.requiredScore)
+        zone:SetAttribute('DisplayName', zoneConfig.displayName)
+        ensureZoneLabel(zone, zoneConfig.displayName, zoneConfig.requiredScore <= 0)
     end
 
     local rebirthZone = ensureZone(
@@ -467,7 +528,7 @@ function WorldBuilder.build(workspaceRoot: Instance)
         Color3.fromRGB(255, 214, 255)
     )
 
-    ensureZoneLabel(rebirthZone, 'Rebirth')
+    ensureZoneLabel(rebirthZone, 'Rebirth', true)
 end
 
 return WorldBuilder

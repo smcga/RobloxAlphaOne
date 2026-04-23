@@ -5,12 +5,16 @@ export type AgeZoneUnlockConfig = {
 
 local ZoneUnlockUiLogic = {}
 
+function ZoneUnlockUiLogic.isZoneUnlocked(score: number, requiredScore: number): boolean
+    return score >= requiredScore
+end
+
 function ZoneUnlockUiLogic.getNextUnlock(
     score: number,
     ageZoneConfigs: { AgeZoneUnlockConfig }
 ): AgeZoneUnlockConfig?
     for _, zoneConfig in ipairs(ageZoneConfigs) do
-        if score < zoneConfig.requiredScore then
+        if not ZoneUnlockUiLogic.isZoneUnlocked(score, zoneConfig.requiredScore) then
             return zoneConfig
         end
     end

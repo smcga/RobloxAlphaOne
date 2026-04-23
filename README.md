@@ -4,7 +4,9 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 
 ## What this project does
 - Spawns players into a stylized starter world with a baseplate, hills, paths, Creator Store tree assets ("Realistic Trees", asset `3256343670`), flower bush assets ("Realistic bush flowers mesh", asset `9187138703`), and an `Age of Beads` rock/grass decor cluster using Creator Store assets (`4038061999`, `2846635652`, `9217425479`, `4453595550`, `13785580624`, `1925262929`, `16170402764`) plus deterministic path/hill/rock props built from decor specs.
-- Creates visible glowing circular scoring zones across 12 progression ages.
+- Creates visible glowing circular scoring zones across 12 progression ages, while each age's floating name stays hidden until that age is unlocked by score.
+- Spawns players at an `Age of Beads`-side spawn pad instead of the world center.
+- Plays looping background music from `assets/Ascension.mp3` (`rbxasset://assets/Ascension.mp3`).
 - Shows `Score: 0` UI on join/spawn.
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
 - Shows `Rebirths: 0` UI under score on join/spawn.
