@@ -1,34 +1,49 @@
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
 
 local toolbar = plugin:CreateToolbar('World Layout')
-local syncButton = toolbar:CreateButton(
-    'Sync Layout',
-    'Build world and sync Studio decor back into Shared.WorldLayout',
-    ''
-)
+local importButton =
+    toolbar:CreateButton('Import World', 'Load world from Shared.WorldLayout into Workspace', '')
+local exportButton =
+    toolbar:CreateButton('Export World', 'Save current Workspace decor into Shared.WorldLayout', '')
 
-syncButton.Click:Connect(function()
+local function run(mode: 'Import' | 'Export')
     local shared = ReplicatedStorage:FindFirstChild('Shared')
     if not shared then
-        warn('ReplicatedStorage.Shared not found. Connect Rojo first.')
+        warn('[World Layout Sync] ReplicatedStorage.Shared not found. Connect Rojo first.')
         return
     end
 
     local previewModule = shared:FindFirstChild('StudioWorldPreview')
     if not previewModule or not previewModule:IsA('ModuleScript') then
-        warn('ReplicatedStorage.Shared.StudioWorldPreview not found. Connect Rojo first.')
+        warn(
+            '[World Layout Sync] ReplicatedStorage.Shared.StudioWorldPreview not found. Connect Rojo first.'
+        )
+        return
+    end
+
+    local flowModule = shared:FindFirstChild('WorldLayoutSyncFlowLogic')
+    if not flowModule or not flowModule:IsA('ModuleScript') then
+        warn(
+            '[World Layout Sync] ReplicatedStorage.Shared.WorldLayoutSyncFlowLogic not found. Connect Rojo first.'
+        )
         return
     end
 
     local preview = require(previewModule)
-    local ok, err = pcall(function()
-        preview.buildInWorkspace()
-        preview.syncLayoutModuleFromWorkspace()
-    end)
+    local flow = require(flowModule)
+    local ok, message = flow.run(preview, mode)
 
     if ok then
-        print('World layout sync complete.')
+        print(message)
     else
-        warn(string.format('World layout sync failed: %s', tostring(err)))
+        warn(message)
     end
+end
+
+importButton.Click:Connect(function()
+    run('Import')
+end)
+
+exportButton.Click:Connect(function()
+    run('Export')
 end)

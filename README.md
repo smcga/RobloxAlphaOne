@@ -21,6 +21,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Applies a rebirth multiplier to score gain (`max(Rebirths, 1)`), so `2` rebirths means `2x` score/sec.
 - Unlock requirements and score gains scale so each age takes roughly the same active time to complete while totals grow exponentially.
 - Entering the glowing `Rebirth` zone converts score into rebirths (`+1` per `1000` score) and resets score to `0`.
+- Entering a locked age zone before meeting its score requirement now flings the player away, kills them, plays a global death SFX, and bursts a cloud of `Nope!` text particles.
 - Stops score gain immediately when leaving each zone.
 - Keeps score server-authoritative and persistent across death/rejoin with Roblox DataStore.
 
@@ -121,7 +122,11 @@ This captures decor from:
 
 and writes the generated module source directly into `ReplicatedStorage.Shared.WorldLayout.Source`, so Rojo can sync the change back to `src/Shared/WorldLayout.luau` without manual paste.
 
-6. (Optional, one-click plugin) A Studio plugin scaffold is included at `studio/WorldLayoutSync.plugin.lua`. Install it as a local plugin, then click **World Layout -> Sync Layout** to build + sync in one step.
+6. (Optional, one-click plugin) A Studio plugin scaffold is included at `studio/WorldLayoutSync.plugin.lua`. Install it as a local plugin for a load/save-style round trip:
+   - **World Layout -> Import World** loads from code (`Shared.WorldLayout`) into `Workspace` (load).
+   - **World Layout -> Export World** writes current `Workspace` decor back into `Shared.WorldLayout` (save).
+
+   Both actions print explicit success/failure messages in Studio output. Export failures include the underlying error so you can quickly fix missing folders, missing module wiring, or invalid decor setup.
 
 7. Start Play mode.
 8. Verify expected MVP behavior:
@@ -136,6 +141,8 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - Score gain scales with rebirths (example: `2` rebirths doubles whichever age-zone gain is active).
    - Age zones unlock in sequence as your score passes each requirement threshold.
    - Entering the `Rebirth` zone resets score to `0` and grants `floor(score / 1000)` rebirths.
+   - Entering a still-locked age zone flings you away, then kills you, while preserving your existing score/rebirth totals.
+   - Locked-zone deaths play a shared SFX for everyone and spawn flying `Nope!` text particles around the punished player.
    - If you're the game owner, admin panel buttons can multiply your current score by `2x` or `10x`.
    - Leaving zones stops score gain immediately.
 
