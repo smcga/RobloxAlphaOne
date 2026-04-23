@@ -6,6 +6,8 @@ local ReplicatedStorage = game:GetService('ReplicatedStorage')
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
 local AdminLogic = require(Shared:WaitForChild('AdminLogic'))
+local GlobalLeaderboardLogic = require(Shared:WaitForChild('GlobalLeaderboardLogic'))
+local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
 local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
@@ -26,9 +28,18 @@ local adminScoreMultiplyRequestEvent = Remotes.getOrCreateAdminScoreMultiplyRequ
 local adminStateUpdatedEvent = Remotes.getOrCreateAdminStateUpdatedEvent()
 local playerStates: { [Player]: PlayerScoreState } = {}
 local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
+local globalLeaderboardStore =
+    DataStoreService:GetOrderedDataStore(Constants.GLOBAL_LEADERBOARD_DATASTORE_NAME)
+local globalLeaderboardTextLabel: TextLabel? = nil
+local cachedNamesByUserId: { [number]: string } = {}
+local lastLeaderboardRefreshClock = 0
 
 local function getPlayerDataStoreKey(player: Player): string
     return string.format('player_%s', tostring(player.UserId))
+end
+
+local function getLeaderboardDataStoreKey(userId: number): string
+    return string.format('player_%s', tostring(userId))
 end
 
 local function getHumanoidRootPart(player: Player): BasePart?
@@ -47,6 +58,154 @@ end
 
 local function pushScore(player: Player, score: number, rebirths: number)
     scoreUpdatedEvent:FireClient(player, score, rebirths)
+end
+
+local function ensureLeaderboardTextLabel(): TextLabel?
+    if globalLeaderboardTextLabel and globalLeaderboardTextLabel.Parent ~= nil then
+        return globalLeaderboardTextLabel
+    end
+
+    local signBoard = workspace:FindFirstChild('GlobalLeaderboardSignBoard')
+    if not signBoard or not signBoard:IsA('BasePart') then
+        return nil
+    end
+
+    local surfaceGui = signBoard:FindFirstChild('LeaderboardSurfaceGui')
+    if not surfaceGui or not surfaceGui:IsA('SurfaceGui') then
+        if surfaceGui then
+            surfaceGui:Destroy()
+        end
+
+        surfaceGui = Instance.new('SurfaceGui')
+        surfaceGui.Name = 'LeaderboardSurfaceGui'
+        surfaceGui.Face = Enum.NormalId.Right
+        surfaceGui.AlwaysOnTop = true
+        surfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+        surfaceGui.PixelsPerStud = 30
+        surfaceGui.Parent = signBoard
+    end
+
+    local titleLabel = surfaceGui:FindFirstChild('LeaderboardLabel')
+    if not titleLabel or not titleLabel:IsA('TextLabel') then
+        if titleLabel then
+            titleLabel:Destroy()
+        end
+
+        titleLabel = Instance.new('TextLabel')
+        titleLabel.Name = 'LeaderboardLabel'
+        titleLabel.Size = UDim2.fromScale(1, 1)
+        titleLabel.BackgroundTransparency = 0.2
+        titleLabel.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+        titleLabel.TextColor3 = Color3.fromRGB(255, 240, 189)
+        titleLabel.TextStrokeTransparency = 0.35
+        titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        titleLabel.TextYAlignment = Enum.TextYAlignment.Top
+        titleLabel.Font = Enum.Font.GothamBold
+        titleLabel.TextScaled = false
+        titleLabel.TextSize = 22
+        titleLabel.RichText = false
+        titleLabel.TextWrapped = false
+        titleLabel.Text = 'Loading leaderboard...'
+        titleLabel.Parent = surfaceGui
+    end
+
+    globalLeaderboardTextLabel = titleLabel :: TextLabel
+    return globalLeaderboardTextLabel
+end
+
+local function resolvePlayerName(userId: number): string
+    local cachedName = cachedNamesByUserId[userId]
+    if cachedName then
+        return cachedName
+    end
+
+    local onlinePlayer = Players:GetPlayerByUserId(userId)
+    if onlinePlayer then
+        cachedNamesByUserId[userId] = onlinePlayer.DisplayName
+        return onlinePlayer.DisplayName
+    end
+
+    local success, result = pcall(function()
+        return Players:GetNameFromUserIdAsync(userId)
+    end)
+
+    if success and type(result) == 'string' then
+        cachedNamesByUserId[userId] = result
+        return result
+    end
+
+    return string.format('User %s', tostring(userId))
+end
+
+local function refreshGlobalLeaderboardSign()
+    local signTextLabel = ensureLeaderboardTextLabel()
+    if not signTextLabel then
+        return
+    end
+
+    local success, pagesOrErr = pcall(function()
+        return globalLeaderboardStore:GetSortedAsync(
+            false,
+            Constants.GLOBAL_LEADERBOARD_MAX_ENTRIES
+        )
+    end)
+
+    if not success then
+        warn(string.format('Failed to fetch global leaderboard page: %s', tostring(pagesOrErr)))
+        signTextLabel.Text = 'GLOBAL ALL-TIME TOP SCORES\n\nFailed to load leaderboard'
+        return
+    end
+
+    local page = pagesOrErr:GetCurrentPage()
+    local entries = {}
+
+    for _, item in ipairs(page) do
+        local userId = tonumber(item.key)
+        if userId ~= nil then
+            table.insert(entries, {
+                userId = userId,
+                playerName = resolvePlayerName(userId),
+                bestScore = item.value,
+            })
+        end
+    end
+
+    local normalizedEntries =
+        GlobalLeaderboardLogic.normalizeEntries(entries, Constants.GLOBAL_LEADERBOARD_MAX_ENTRIES)
+
+    signTextLabel.Text = GlobalLeaderboardLogic.buildSignText(normalizedEntries, function(score)
+        return NumberFormat.formatCompact(score)
+    end)
+    lastLeaderboardRefreshClock = os.clock()
+end
+
+local function saveBestScoreForLeaderboard(userId: number, scoreValue: number)
+    local success, err = pcall(function()
+        globalLeaderboardStore:UpdateAsync(
+            getLeaderboardDataStoreKey(userId),
+            function(previousValue)
+                local previousNumber = tonumber(previousValue)
+                if previousNumber == nil then
+                    return math.max(math.floor(scoreValue), 0)
+                end
+
+                return math.max(math.floor(scoreValue), math.floor(previousNumber))
+            end
+        )
+    end)
+
+    if not success then
+        warn(
+            string.format(
+                'Failed to save global leaderboard score for user %s: %s',
+                tostring(userId),
+                tostring(err)
+            )
+        )
+        return
+    end
+
+    refreshGlobalLeaderboardSign()
 end
 
 local function getRankNameForScore(score: number): string
@@ -173,6 +332,8 @@ local function savePlayerState(player: Player, force: boolean)
             return
         end
 
+        saveBestScoreForLeaderboard(player.UserId, scoreToSave)
+
         local latestState = playerStates[player]
         if latestState and latestState.lastSavedVersion < captureVersion then
             latestState.lastSavedVersion = captureVersion
@@ -233,10 +394,12 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
 end)
 
 Players.PlayerAdded:Connect(function(player)
+    cachedNamesByUserId[player.UserId] = player.DisplayName
     initializePlayerState(player)
 end)
 
 for _, player in Players:GetPlayers() do
+    cachedNamesByUserId[player.UserId] = player.DisplayName
     initializePlayerState(player)
 end
 
@@ -254,6 +417,13 @@ game:BindToClose(function()
 end)
 
 RunService.Heartbeat:Connect(function(deltaSeconds: number)
+    if
+        os.clock() - lastLeaderboardRefreshClock
+        >= Constants.GLOBAL_LEADERBOARD_REFRESH_INTERVAL_SECONDS
+    then
+        refreshGlobalLeaderboardSign()
+    end
+
     for player, state in pairs(playerStates) do
         local rootPart = getHumanoidRootPart(player)
         local isInsideAgeZones = {}
@@ -304,3 +474,5 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
         state.progressionState = tickResult.state
     end
 end)
+
+refreshGlobalLeaderboardSign()

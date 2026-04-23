@@ -110,7 +110,8 @@ local function updateAgeZoneLabelVisibility(score: number)
         if zone and zone:IsA('BasePart') then
             local billboard = zone:FindFirstChild('ZoneBillboard')
             if billboard and billboard:IsA('BillboardGui') then
-                billboard.Enabled = ZoneUnlockUiLogic.isZoneUnlocked(score, zoneConfig.requiredScore)
+                billboard.Enabled =
+                    ZoneUnlockUiLogic.isZoneUnlocked(score, zoneConfig.requiredScore)
             end
         end
     end

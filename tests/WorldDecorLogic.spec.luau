@@ -48,13 +48,14 @@ end
 
 runCase('decor specs include stable scene pieces', function()
     local specs = WorldDecorLogic.getDecorSpecs()
-    expectEqual(#specs, 24, 'scene should include the expected number of decor entries')
+    expectEqual(#specs, 27, 'scene should include the expected number of decor entries')
 
     local foundMainPath = false
     local foundRockCluster = false
     local foundAssetTree = false
     local foundFlowerBush = false
     local foundAgeOfBeadsDecor = false
+    local foundLeaderboardSign = false
 
     for _, spec in specs do
         if spec.name == 'MainPath' then
@@ -76,6 +77,10 @@ runCase('decor specs include stable scene pieces', function()
         if spec.name == 'AgeOfBeadsRock' then
             foundAgeOfBeadsDecor = true
         end
+
+        if spec.name == 'GlobalLeaderboardSignBoard' then
+            foundLeaderboardSign = true
+        end
     end
 
     expectTruthy(foundMainPath, 'main path decor should exist')
@@ -83,6 +88,7 @@ runCase('decor specs include stable scene pieces', function()
     expectTruthy(foundAssetTree, 'asset tree decor should exist')
     expectTruthy(foundFlowerBush, 'flower bush decor should exist')
     expectTruthy(foundAgeOfBeadsDecor, 'age of beads decor should exist')
+    expectTruthy(foundLeaderboardSign, 'global leaderboard sign decor should exist')
 end)
 
 runCase('decor specs keep unique stable world ids for round-trip export', function()
