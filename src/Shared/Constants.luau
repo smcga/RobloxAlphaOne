@@ -272,6 +272,13 @@ local Constants = {
     REBIRTH_ZONE_CENTER = Vector3.new(-420, 1, 0),
     REBIRTH_ZONE_RADIUS = 10,
     REBIRTH_ZONE_HEIGHT = 4,
+    SPAWN_LOCATION_NAME = 'AgeOfBeadsSpawn',
+    SPAWN_LOCATION_SIZE = Vector3.new(16, 1, 16),
+    SPAWN_LOCATION_OFFSET = Vector3.new(0, 3, 24),
+
+    BACKGROUND_MUSIC_NAME = 'AscensionLoop',
+    BACKGROUND_MUSIC_SOUND_ID = 'rbxasset://assets/Ascension.mp3',
+    BACKGROUND_MUSIC_VOLUME = 0.35,
 
     BASEPLATE_SIZE = Vector3.new(920, 1, 420),
 }

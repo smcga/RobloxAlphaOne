@@ -29,6 +29,16 @@ local ageZoneConfigs = {
     },
 }
 
+runCase('treats zone as unlocked when score meets requirement', function()
+    local unlocked = ZoneUnlockUiLogic.isZoneUnlocked(600, 600)
+    expectEqual(unlocked, true, 'score at requirement should unlock zone')
+end)
+
+runCase('treats zone as locked when score is below requirement', function()
+    local unlocked = ZoneUnlockUiLogic.isZoneUnlocked(599, 600)
+    expectEqual(unlocked, false, 'score below requirement should keep zone locked')
+end)
+
 runCase('returns first locked age as next unlock', function()
     local nextUnlock = ZoneUnlockUiLogic.getNextUnlock(600, ageZoneConfigs)
     expectEqual(

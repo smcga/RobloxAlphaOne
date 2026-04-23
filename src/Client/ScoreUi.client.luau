@@ -104,6 +104,18 @@ rankProgressTextLabel.TextSize = 14
 rankProgressTextLabel.Text = '0 / 1,000 to Rank Two'
 rankProgressTextLabel.Parent = rankPanel
 
+local function updateAgeZoneLabelVisibility(score: number)
+    for _, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
+        local zone = workspace:FindFirstChild(zoneConfig.zoneName)
+        if zone and zone:IsA('BasePart') then
+            local billboard = zone:FindFirstChild('ZoneBillboard')
+            if billboard and billboard:IsA('BillboardGui') then
+                billboard.Enabled = ZoneUnlockUiLogic.isZoneUnlocked(score, zoneConfig.requiredScore)
+            end
+        end
+    end
+end
+
 local function setScoreAndRebirths(score: number, rebirths: number)
     scoreLabel.Text = string.format('Score: %s', NumberFormat.formatCompact(score))
     rebirthsLabel.Text = string.format('Rebirths: %s', NumberFormat.formatCompact(rebirths))
@@ -112,6 +124,7 @@ local function setScoreAndRebirths(score: number, rebirths: number)
         Constants.AGE_ZONE_CONFIGS,
         NumberFormat.formatCompact
     )
+    updateAgeZoneLabelVisibility(score)
 
     local rankProgress = RankProgressionLogic.getRankProgress(score, Constants.RANK_CONFIGS)
     rankNameLabel.Text = rankProgress.currentRankName
