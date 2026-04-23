@@ -13,12 +13,14 @@ local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local RankAuraLogic = require(Shared:WaitForChild('RankAuraLogic'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
+local RewardCatalogLogic = require(Shared:WaitForChild('RewardCatalogLogic'))
 local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
 local LockedZonePenaltyLogic = require(Shared:WaitForChild('LockedZonePenaltyLogic'))
 local ZoneProgressionLogic = require(Shared:WaitForChild('ZoneProgressionLogic'))
 
 type ZoneProgressionState = ZoneProgressionLogic.ZoneProgressionState
 type ProfileData = ProfileDataLogic.ProfileData
+type AdminReward = RewardCatalogLogic.AdminReward
 
 type PlayerScoreState = {
     progressionState: ZoneProgressionState,
@@ -36,6 +38,9 @@ local adminScoreMultiplyRequestEvent = Remotes.getOrCreateAdminScoreMultiplyRequ
 local adminResetProgressRequestEvent = Remotes.getOrCreateAdminResetProgressRequestEvent()
 local adminSkipLuckyChestTimerRequestEvent =
     Remotes.getOrCreateAdminSkipLuckyChestTimerRequestEvent()
+local adminAddRewardRequestEvent = Remotes.getOrCreateAdminAddRewardRequestEvent()
+local adminAddRewardResultEvent = Remotes.getOrCreateAdminAddRewardResultEvent()
+local adminRewardCatalogUpdatedEvent = Remotes.getOrCreateAdminRewardCatalogUpdatedEvent()
 local adminStateUpdatedEvent = Remotes.getOrCreateAdminStateUpdatedEvent()
 local luckyChestStatusUpdatedEvent = Remotes.getOrCreateLuckyChestStatusUpdatedEvent()
 local luckyChestOpenRequestEvent = Remotes.getOrCreateLuckyChestOpenRequestEvent()
@@ -43,6 +48,28 @@ local luckyChestOpenedEvent = Remotes.getOrCreateLuckyChestOpenedEvent()
 
 local playerStates: { [Player]: PlayerScoreState } = {}
 local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
+local customRewardCatalogStore =
+    DataStoreService:GetDataStore(Constants.CUSTOM_REWARD_CATALOG_DATASTORE_NAME)
+local customRewards: { AdminReward } = {}
+
+local function getCustomLuckyChestRewards()
+    local luckyChestRewards = {}
+    for index, reward in ipairs(customRewards) do
+        luckyChestRewards[index] = RewardCatalogLogic.toLuckyChestRewardItem(reward)
+    end
+    return luckyChestRewards
+end
+
+local function pushCustomRewardCatalogToPlayer(player: Player)
+    adminRewardCatalogUpdatedEvent:FireClient(player, getCustomLuckyChestRewards())
+end
+
+local function broadcastCustomRewardCatalog()
+    local rewards = getCustomLuckyChestRewards()
+    for _, player in ipairs(Players:GetPlayers()) do
+        adminRewardCatalogUpdatedEvent:FireClient(player, rewards)
+    end
+end
 
 local function getOrCreateLockedZoneDeathSound(): Sound
     local existing = SoundService:FindFirstChild(Constants.LOCKED_ZONE_DEATH_SOUND_NAME)
@@ -431,6 +458,83 @@ local function isPlayerAdmin(player: Player): boolean
     return game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId
 end
 
+local function loadCustomRewardCatalog()
+    local success, result = pcall(function()
+        return customRewardCatalogStore:GetAsync(Constants.CUSTOM_REWARD_CATALOG_DATASTORE_KEY)
+    end)
+
+    if not success then
+        warn(string.format('Failed to load custom reward catalog: %s', tostring(result)))
+        customRewards = {}
+        return
+    end
+
+    if typeof(result) ~= 'table' or typeof(result.rewards) ~= 'table' then
+        customRewards = {}
+        return
+    end
+
+    local loadedRewards: { AdminReward } = {}
+    local seenIds: { [string]: boolean } = {}
+    for _, rawReward in ipairs(result.rewards) do
+        if #loadedRewards >= Constants.CUSTOM_REWARD_CATALOG_MAX_REWARDS then
+            break
+        end
+        if typeof(rawReward) == 'table' then
+            local normalizedKind = RewardCatalogLogic.normalizeKind(rawReward.kind)
+            local normalizedRarity = RewardCatalogLogic.normalizeRarity(rawReward.rarity)
+            local displayName = RewardCatalogLogic.normalizeDisplayName(rawReward.displayName)
+            local assetId = rawReward.assetId
+            if
+                normalizedKind
+                and normalizedRarity
+                and displayName
+                and typeof(assetId) == 'number'
+                and assetId > 0
+            then
+                local rewardId =
+                    RewardCatalogLogic.buildRewardId(normalizedKind, math.floor(assetId))
+                if seenIds[rewardId] then
+                    continue
+                end
+                seenIds[rewardId] = true
+                table.insert(loadedRewards, {
+                    id = rewardId,
+                    kind = normalizedKind,
+                    displayName = displayName,
+                    rarity = normalizedRarity,
+                    assetId = math.floor(assetId),
+                    sourceUrl = typeof(rawReward.sourceUrl) == 'string' and rawReward.sourceUrl
+                        or nil,
+                    createdAt = typeof(rawReward.createdAt) == 'number' and rawReward.createdAt
+                        or os.time(),
+                    createdByUserId = typeof(rawReward.createdByUserId) == 'number'
+                            and rawReward.createdByUserId
+                        or 0,
+                })
+            end
+        end
+    end
+
+    customRewards = loadedRewards
+end
+
+local function saveCustomRewardCatalog(rewardsToSave: { AdminReward }): boolean
+    local success, err = pcall(function()
+        customRewardCatalogStore:SetAsync(Constants.CUSTOM_REWARD_CATALOG_DATASTORE_KEY, {
+            rewards = rewardsToSave,
+            updatedAt = os.time(),
+        })
+    end)
+
+    if not success then
+        warn(string.format('Failed to save custom reward catalog: %s', tostring(err)))
+        return false
+    end
+
+    return true
+end
+
 local function createPlayerState(profileData: ProfileData): PlayerScoreState
     return {
         progressionState = ZoneProgressionLogic.newState(profileData.score, profileData.rebirths),
@@ -519,6 +623,7 @@ local function initializePlayerState(player: Player)
     pushLuckyChestStatus(player, state.profileData)
     updateRankTitle(player, state.progressionState.score)
     pushIsAdmin(player, isPlayerAdmin(player))
+    pushCustomRewardCatalogToPlayer(player)
 
     player.CharacterAdded:Connect(function()
         local currentState = playerStates[player]
@@ -601,6 +706,41 @@ adminSkipLuckyChestTimerRequestEvent.OnServerEvent:Connect(function(player: Play
     savePlayerState(player, false)
 end)
 
+adminAddRewardRequestEvent.OnServerEvent:Connect(function(player: Player, payload)
+    if not isPlayerAdmin(player) then
+        adminAddRewardResultEvent:FireClient(player, false, 'Only admins can add rewards.', nil)
+        return
+    end
+
+    local ok, message, normalizedSubmission = RewardCatalogLogic.normalizeSubmission(payload)
+    if not ok or not normalizedSubmission then
+        adminAddRewardResultEvent:FireClient(player, false, message, nil)
+        return
+    end
+
+    local upsertOk, upsertMessage, nextRewards, reward = RewardCatalogLogic.upsertReward(
+        customRewards,
+        normalizedSubmission,
+        os.time(),
+        player.UserId,
+        Constants.CUSTOM_REWARD_CATALOG_MAX_REWARDS
+    )
+
+    if not upsertOk or not nextRewards or not reward then
+        adminAddRewardResultEvent:FireClient(player, false, upsertMessage, nil)
+        return
+    end
+
+    if not saveCustomRewardCatalog(nextRewards) then
+        adminAddRewardResultEvent:FireClient(player, false, 'Could not save reward catalog.', nil)
+        return
+    end
+
+    customRewards = nextRewards
+    adminAddRewardResultEvent:FireClient(player, true, 'Reward saved successfully.', reward)
+    broadcastCustomRewardCatalog()
+end)
+
 luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
     local state = playerStates[player]
     if not state then
@@ -617,7 +757,8 @@ luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
         Constants.LUCKY_CHEST_SCORE_BOOST_DURATION_SECONDS,
         function()
             return Random.new():NextNumber()
-        end
+        end,
+        getCustomLuckyChestRewards()
     )
 
     if not spinResult then
@@ -643,6 +784,8 @@ luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
     markDirty(state)
     savePlayerState(player, false)
 end)
+
+loadCustomRewardCatalog()
 
 Players.PlayerAdded:Connect(function(player)
     initializePlayerState(player)

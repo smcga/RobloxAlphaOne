@@ -409,10 +409,13 @@ local adminStateUpdatedEvent = Remotes.waitForAdminStateUpdatedEvent()
 local luckyChestStatusUpdatedEvent = Remotes.waitForLuckyChestStatusUpdatedEvent()
 local luckyChestOpenRequestEvent = Remotes.waitForLuckyChestOpenRequestEvent()
 local luckyChestOpenedEvent = Remotes.waitForLuckyChestOpenedEvent()
+local adminAddRewardRequestEvent = Remotes.waitForAdminAddRewardRequestEvent()
+local adminAddRewardResultEvent = Remotes.waitForAdminAddRewardResultEvent()
+local adminRewardCatalogUpdatedEvent = Remotes.waitForAdminRewardCatalogUpdatedEvent()
 
 local adminPanel = Instance.new('Frame')
 adminPanel.Name = 'AdminPanel'
-adminPanel.Size = UDim2.fromOffset(220, 250)
+adminPanel.Size = UDim2.fromOffset(220, 296)
 adminPanel.Position = UDim2.fromOffset(16, 280)
 adminPanel.BackgroundTransparency = 0.3
 adminPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -503,6 +506,134 @@ resetConfirmationLabel.TextWrapped = true
 resetConfirmationLabel.Text = ''
 resetConfirmationLabel.Parent = adminPanel
 
+local addRewardButton = Instance.new('TextButton')
+addRewardButton.Name = 'AddRewardButton'
+addRewardButton.Size = UDim2.fromOffset(188, 36)
+addRewardButton.Position = UDim2.fromOffset(16, 212)
+addRewardButton.BackgroundColor3 = Color3.fromRGB(66, 84, 130)
+addRewardButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+addRewardButton.Font = Enum.Font.GothamBold
+addRewardButton.TextSize = 16
+addRewardButton.Text = 'Add Reward'
+addRewardButton.Parent = adminPanel
+
+local addRewardButtonCorner = corner:Clone()
+addRewardButtonCorner.Parent = addRewardButton
+
+resetConfirmationLabel.Position = UDim2.fromOffset(16, 252)
+
+local addRewardOverlay = Instance.new('TextButton')
+addRewardOverlay.Name = 'AddRewardOverlay'
+addRewardOverlay.Size = UDim2.fromScale(1, 1)
+addRewardOverlay.BackgroundColor3 = Color3.fromRGB(8, 10, 14)
+addRewardOverlay.BackgroundTransparency = 0.35
+addRewardOverlay.AutoButtonColor = false
+addRewardOverlay.Text = ''
+addRewardOverlay.Visible = false
+addRewardOverlay.ZIndex = 15
+addRewardOverlay.Parent = screenGui
+
+local addRewardModal = Instance.new('Frame')
+addRewardModal.Name = 'AddRewardModal'
+addRewardModal.Size = UDim2.fromOffset(420, 300)
+addRewardModal.AnchorPoint = Vector2.new(0.5, 0.5)
+addRewardModal.Position = UDim2.fromScale(0.5, 0.5)
+addRewardModal.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
+addRewardModal.BackgroundTransparency = 0.1
+addRewardModal.ZIndex = 16
+addRewardModal.Parent = addRewardOverlay
+
+local addRewardModalCorner = corner:Clone()
+addRewardModalCorner.Parent = addRewardModal
+
+local addRewardTitle = Instance.new('TextLabel')
+addRewardTitle.Size = UDim2.fromOffset(388, 30)
+addRewardTitle.Position = UDim2.fromOffset(16, 12)
+addRewardTitle.BackgroundTransparency = 1
+addRewardTitle.Font = Enum.Font.GothamBold
+addRewardTitle.TextSize = 20
+addRewardTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+addRewardTitle.TextXAlignment = Enum.TextXAlignment.Left
+addRewardTitle.Text = 'Add Lucky Chest Reward'
+addRewardTitle.ZIndex = 17
+addRewardTitle.Parent = addRewardModal
+
+local selectedRewardKind = 'hat'
+local selectedRewardRarity = 'green'
+local addRewardPending = false
+
+local kindHatButton = Instance.new('TextButton')
+kindHatButton.Size = UDim2.fromOffset(188, 32)
+kindHatButton.Position = UDim2.fromOffset(16, 54)
+kindHatButton.BackgroundColor3 = Color3.fromRGB(53, 103, 62)
+kindHatButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+kindHatButton.Font = Enum.Font.GothamBold
+kindHatButton.TextSize = 14
+kindHatButton.Text = 'Hat'
+kindHatButton.ZIndex = 17
+kindHatButton.Parent = addRewardModal
+corner:Clone().Parent = kindHatButton
+
+local kindMountButton = kindHatButton:Clone()
+kindMountButton.Position = UDim2.fromOffset(216, 54)
+kindMountButton.Text = 'Vehicle Mount'
+kindMountButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+kindMountButton.Parent = addRewardModal
+
+local assetInput = Instance.new('TextBox')
+assetInput.Size = UDim2.fromOffset(388, 34)
+assetInput.Position = UDim2.fromOffset(16, 96)
+assetInput.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+assetInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+assetInput.PlaceholderColor3 = Color3.fromRGB(170, 170, 170)
+assetInput.PlaceholderText = 'Asset link or ID'
+assetInput.ClearTextOnFocus = false
+assetInput.Font = Enum.Font.Gotham
+assetInput.TextSize = 14
+assetInput.TextXAlignment = Enum.TextXAlignment.Left
+assetInput.ZIndex = 17
+assetInput.Parent = addRewardModal
+corner:Clone().Parent = assetInput
+
+local displayNameInput = assetInput:Clone()
+displayNameInput.Position = UDim2.fromOffset(16, 140)
+displayNameInput.PlaceholderText = 'Display name'
+displayNameInput.Parent = addRewardModal
+
+local rarityButton = kindHatButton:Clone()
+rarityButton.Size = UDim2.fromOffset(388, 34)
+rarityButton.Position = UDim2.fromOffset(16, 184)
+rarityButton.Text = 'Rarity: Green'
+rarityButton.BackgroundColor3 = RARITY_COLORS.green
+rarityButton.Parent = addRewardModal
+
+local addRewardStatusLabel = Instance.new('TextLabel')
+addRewardStatusLabel.Size = UDim2.fromOffset(388, 34)
+addRewardStatusLabel.Position = UDim2.fromOffset(16, 224)
+addRewardStatusLabel.BackgroundTransparency = 1
+addRewardStatusLabel.Text = ''
+addRewardStatusLabel.TextWrapped = true
+addRewardStatusLabel.TextColor3 = Color3.fromRGB(255, 200, 200)
+addRewardStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+addRewardStatusLabel.Font = Enum.Font.Gotham
+addRewardStatusLabel.TextSize = 14
+addRewardStatusLabel.ZIndex = 17
+addRewardStatusLabel.Parent = addRewardModal
+
+local cancelAddRewardButton = kindHatButton:Clone()
+cancelAddRewardButton.Size = UDim2.fromOffset(188, 34)
+cancelAddRewardButton.Position = UDim2.fromOffset(16, 260)
+cancelAddRewardButton.BackgroundColor3 = Color3.fromRGB(90, 56, 56)
+cancelAddRewardButton.Text = 'Cancel'
+cancelAddRewardButton.Parent = addRewardModal
+
+local submitAddRewardButton = kindHatButton:Clone()
+submitAddRewardButton.Size = UDim2.fromOffset(188, 34)
+submitAddRewardButton.Position = UDim2.fromOffset(216, 260)
+submitAddRewardButton.BackgroundColor3 = Color3.fromRGB(53, 103, 62)
+submitAddRewardButton.Text = 'Submit'
+submitAddRewardButton.Parent = addRewardModal
+
 local resetConfirmationPending = false
 local resetConfirmationToken = 0
 local RESET_CONFIRMATION_TIMEOUT_SECONDS = 4
@@ -512,6 +643,50 @@ local function clearResetConfirmationPrompt()
     resetProgressButton.Text = 'Reset Score + Rebirths'
     resetConfirmationLabel.Text = ''
 end
+
+local RARITY_ORDER = { 'green', 'blue', 'purple', 'orange', 'gold' }
+local rarityIndex = 1
+
+local function refreshRewardKindButtons()
+    kindHatButton.BackgroundColor3 = selectedRewardKind == 'hat' and Color3.fromRGB(53, 103, 62)
+        or Color3.fromRGB(45, 45, 45)
+    kindMountButton.BackgroundColor3 = selectedRewardKind == 'vehicleMount'
+            and Color3.fromRGB(53, 103, 62)
+        or Color3.fromRGB(45, 45, 45)
+end
+
+local function refreshRewardRarityButton()
+    local rarityKey = selectedRewardRarity
+    local label = string.upper(string.sub(rarityKey, 1, 1)) .. string.sub(rarityKey, 2)
+    rarityButton.Text = string.format('Rarity: %s', label)
+    rarityButton.BackgroundColor3 = RARITY_COLORS[rarityKey] or Color3.fromRGB(45, 45, 45)
+end
+
+local function setAddRewardPending(pending: boolean)
+    addRewardPending = pending
+    submitAddRewardButton.Active = not pending
+    submitAddRewardButton.AutoButtonColor = not pending
+    submitAddRewardButton.Text = pending and 'Submitting...' or 'Submit'
+end
+
+local function clearAddRewardStatus()
+    addRewardStatusLabel.Text = ''
+end
+
+local function closeAddRewardModal()
+    addRewardOverlay.Visible = false
+    clearAddRewardStatus()
+    setAddRewardPending(false)
+end
+
+local function openAddRewardModal()
+    addRewardOverlay.Visible = true
+    clearAddRewardStatus()
+    setAddRewardPending(false)
+end
+
+refreshRewardKindButtons()
+refreshRewardRarityButton()
 
 resetProgressButton.Activated:Connect(function()
     if not resetConfirmationPending then
@@ -539,7 +714,63 @@ skipLuckyChestTimerButton.Activated:Connect(function()
     adminSkipLuckyChestTimerRequestEvent:FireServer()
 end)
 
-local previousScore: number? = nil
+addRewardButton.Activated:Connect(function()
+    openAddRewardModal()
+end)
+
+kindHatButton.Activated:Connect(function()
+    selectedRewardKind = 'hat'
+    refreshRewardKindButtons()
+end)
+
+kindMountButton.Activated:Connect(function()
+    selectedRewardKind = 'vehicleMount'
+    refreshRewardKindButtons()
+end)
+
+rarityButton.Activated:Connect(function()
+    rarityIndex = (rarityIndex % #RARITY_ORDER) + 1
+    selectedRewardRarity = RARITY_ORDER[rarityIndex]
+    refreshRewardRarityButton()
+end)
+
+cancelAddRewardButton.Activated:Connect(function()
+    closeAddRewardModal()
+end)
+
+addRewardOverlay.Activated:Connect(function()
+    -- Modal blocker: swallow background clicks without closing.
+end)
+
+submitAddRewardButton.Activated:Connect(function()
+    if addRewardPending then
+        return
+    end
+
+    local displayName = displayNameInput.Text
+    local assetText = assetInput.Text
+    if displayName:match('^%s*$') then
+        addRewardStatusLabel.TextColor3 = Color3.fromRGB(255, 180, 180)
+        addRewardStatusLabel.Text = 'Display name is required.'
+        return
+    end
+    if assetText:match('^%s*$') then
+        addRewardStatusLabel.TextColor3 = Color3.fromRGB(255, 180, 180)
+        addRewardStatusLabel.Text = 'Asset link or ID is required.'
+        return
+    end
+
+    setAddRewardPending(true)
+    addRewardStatusLabel.TextColor3 = Color3.fromRGB(180, 220, 255)
+    addRewardStatusLabel.Text = 'Submitting reward...'
+    adminAddRewardRequestEvent:FireServer({
+        kind = selectedRewardKind,
+        displayName = displayName,
+        rarity = selectedRewardRarity,
+        assetText = assetText,
+    })
+end)
+
 luckyChestButton.Activated:Connect(function()
     if isChestSpinPlaying then
         return
@@ -562,7 +793,24 @@ adminStateUpdatedEvent.OnClientEvent:Connect(function(isAdmin: boolean)
     adminPanel.Visible = isAdmin
     if not isAdmin then
         clearResetConfirmationPrompt()
+        closeAddRewardModal()
     end
+end)
+
+adminAddRewardResultEvent.OnClientEvent:Connect(function(success: boolean, message: string)
+    setAddRewardPending(false)
+    addRewardStatusLabel.Text = message or ''
+    addRewardStatusLabel.TextColor3 = success and Color3.fromRGB(180, 255, 187)
+        or Color3.fromRGB(255, 180, 180)
+
+    if success then
+        assetInput.Text = ''
+        displayNameInput.Text = ''
+    end
+end)
+
+adminRewardCatalogUpdatedEvent.OnClientEvent:Connect(function()
+    -- Catalog is server-authoritative; cache can be added here if client-side previews are needed.
 end)
 
 luckyChestStatusUpdatedEvent.OnClientEvent:Connect(function(serverNextLuckyChestOpenAt: number)

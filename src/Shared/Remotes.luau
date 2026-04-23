@@ -7,6 +7,9 @@ Remotes.SCORE_UPDATED_EVENT = 'ScoreUpdated'
 Remotes.ADMIN_SCORE_MULTIPLY_REQUEST_EVENT = 'AdminScoreMultiplyRequest'
 Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT = 'AdminResetProgressRequest'
 Remotes.ADMIN_SKIP_LUCKY_CHEST_TIMER_REQUEST_EVENT = 'AdminSkipLuckyChestTimerRequest'
+Remotes.ADMIN_ADD_REWARD_REQUEST_EVENT = 'AdminAddRewardRequest'
+Remotes.ADMIN_ADD_REWARD_RESULT_EVENT = 'AdminAddRewardResult'
+Remotes.ADMIN_REWARD_CATALOG_UPDATED_EVENT = 'AdminRewardCatalogUpdated'
 Remotes.ADMIN_STATE_UPDATED_EVENT = 'AdminStateUpdated'
 Remotes.LUCKY_CHEST_STATUS_UPDATED_EVENT = 'LuckyChestStatusUpdated'
 Remotes.LUCKY_CHEST_OPEN_REQUEST_EVENT = 'LuckyChestOpenRequest'
@@ -58,27 +61,11 @@ function Remotes.waitForAdminScoreMultiplyRequestEvent(): RemoteEvent
 end
 
 function Remotes.getOrCreateAdminResetProgressRequestEvent(): RemoteEvent
-    local folder = ReplicatedStorage:FindFirstChild(Remotes.FOLDER_NAME)
-    if not folder then
-        folder = Instance.new('Folder')
-        folder.Name = Remotes.FOLDER_NAME
-        folder.Parent = ReplicatedStorage
-    end
-
-    local event = folder:FindFirstChild(Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT)
-    if not event then
-        event = Instance.new('RemoteEvent')
-        event.Name = Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT
-        event.Parent = folder
-    end
-
-    return event :: RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT)
 end
 
 function Remotes.waitForAdminResetProgressRequestEvent(): RemoteEvent
-    local folder = ReplicatedStorage:WaitForChild(Remotes.FOLDER_NAME)
-    local event = folder:WaitForChild(Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT)
-    return event :: RemoteEvent
+    return waitForRemoteEvent(Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT)
 end
 
 function Remotes.getOrCreateAdminSkipLuckyChestTimerRequestEvent(): RemoteEvent
@@ -87,6 +74,30 @@ end
 
 function Remotes.waitForAdminSkipLuckyChestTimerRequestEvent(): RemoteEvent
     return waitForRemoteEvent(Remotes.ADMIN_SKIP_LUCKY_CHEST_TIMER_REQUEST_EVENT)
+end
+
+function Remotes.getOrCreateAdminAddRewardRequestEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.ADMIN_ADD_REWARD_REQUEST_EVENT)
+end
+
+function Remotes.waitForAdminAddRewardRequestEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.ADMIN_ADD_REWARD_REQUEST_EVENT)
+end
+
+function Remotes.getOrCreateAdminAddRewardResultEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.ADMIN_ADD_REWARD_RESULT_EVENT)
+end
+
+function Remotes.waitForAdminAddRewardResultEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.ADMIN_ADD_REWARD_RESULT_EVENT)
+end
+
+function Remotes.getOrCreateAdminRewardCatalogUpdatedEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.ADMIN_REWARD_CATALOG_UPDATED_EVENT)
+end
+
+function Remotes.waitForAdminRewardCatalogUpdatedEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.ADMIN_REWARD_CATALOG_UPDATED_EVENT)
 end
 
 function Remotes.getOrCreateAdminStateUpdatedEvent(): RemoteEvent

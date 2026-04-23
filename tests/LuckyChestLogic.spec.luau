@@ -94,3 +94,36 @@ runCase('score boost category updates boost expiration', function()
         'boost should expire at target timestamp'
     )
 end)
+
+runCase('custom admin hat rewards are included in chest spins', function()
+    local result = LuckyChestLogic.applyChestSpin(
+        {
+            nextLuckyChestOpenAt = 0,
+            scoreBoostExpiresAt = 0,
+            unlockedHats = {},
+            unlockedPets = {},
+            unlockedVehicleMounts = {},
+        },
+        0,
+        0,
+        100,
+        300,
+        60,
+        randomSequence({ 0.7, 0.99 }),
+        {
+            {
+                id = 'admin_hat_999',
+                displayName = 'Admin Top Hat',
+                rarity = 'gold',
+                assetId = 999,
+                sourceUrl = 'https://www.roblox.com/catalog/999/Admin-Top-Hat',
+                rewardKind = 'hat',
+            },
+        }
+    )
+
+    expectTruthy(result, 'spin should produce a result')
+    expectEqual(result.spinResult.category, 'hat', 'expected hat category')
+    expectEqual(result.spinResult.item.id, 'admin_hat_999', 'expected custom reward id')
+    expectEqual(result.profileData.unlockedHats[1], 'admin_hat_999', 'expected unlocked custom hat')
+end)

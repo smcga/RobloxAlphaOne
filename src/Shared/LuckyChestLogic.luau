@@ -14,6 +14,9 @@ export type LuckyChestRewardItem = {
     rarity: LuckyChestRarity,
     scoreAmount: number?,
     rebirthAmount: number?,
+    assetId: number?,
+    sourceUrl: string?,
+    rewardKind: 'hat' | 'vehicleMount'?,
 }
 
 export type LuckyChestProfileData = {
@@ -256,6 +259,70 @@ function LuckyChestLogic.getCategoryConfigs()
     return CATEGORY_CONFIGS
 end
 
+local function cloneRewardItem(item: LuckyChestRewardItem): LuckyChestRewardItem
+    return {
+        id = item.id,
+        displayName = item.displayName,
+        rarity = item.rarity,
+        scoreAmount = item.scoreAmount,
+        rebirthAmount = item.rebirthAmount,
+        assetId = item.assetId,
+        sourceUrl = item.sourceUrl,
+        rewardKind = item.rewardKind,
+    }
+end
+
+local function cloneCategoryConfig(category)
+    local items = {}
+    for itemIndex, item in ipairs(category.items) do
+        items[itemIndex] = cloneRewardItem(item)
+    end
+
+    return {
+        id = category.id,
+        displayName = category.displayName,
+        rarity = category.rarity,
+        items = items,
+    }
+end
+
+function LuckyChestLogic.getEffectiveCategoryConfigs(customRewards: { LuckyChestRewardItem }?)
+    local effectiveConfigs = {}
+    local hatConfig = nil
+    local vehicleMountConfig = nil
+
+    for categoryIndex, category in ipairs(CATEGORY_CONFIGS) do
+        local clonedConfig = cloneCategoryConfig(category)
+        effectiveConfigs[categoryIndex] = clonedConfig
+
+        if clonedConfig.id == 'hat' then
+            hatConfig = clonedConfig
+        elseif clonedConfig.id == 'vehicleMount' then
+            vehicleMountConfig = clonedConfig
+        end
+    end
+
+    if customRewards then
+        for _, customReward in ipairs(customRewards) do
+            if
+                (customReward.rewardKind == 'hat' or string.match(customReward.id, '^admin_hat_'))
+                and hatConfig
+            then
+                table.insert(hatConfig.items, cloneRewardItem(customReward))
+            elseif
+                (
+                    customReward.rewardKind == 'vehicleMount'
+                    or string.match(customReward.id, '^admin_vehicle_mount_')
+                ) and vehicleMountConfig
+            then
+                table.insert(vehicleMountConfig.items, cloneRewardItem(customReward))
+            end
+        end
+    end
+
+    return effectiveConfigs
+end
+
 function LuckyChestLogic.getRarityWeights(): { WeightedEntry<LuckyChestRarity> }
     return RARITY_WEIGHTS
 end
@@ -286,7 +353,8 @@ function LuckyChestLogic.applyChestSpin(
     nowUnixSeconds: number,
     cooldownSeconds: number,
     scoreBoostDurationSeconds: number,
-    random01: () -> number
+    random01: () -> number,
+    customRewards: { LuckyChestRewardItem }?
 ): LuckyChestApplyResult?
     if not LuckyChestLogic.isChestReady(profileData, nowUnixSeconds) then
         return nil
@@ -294,7 +362,8 @@ function LuckyChestLogic.applyChestSpin(
 
     local weightedCategories = {}
     local categorySpinOptions = {}
-    for _, category in ipairs(CATEGORY_CONFIGS) do
+    local categoryConfigs = LuckyChestLogic.getEffectiveCategoryConfigs(customRewards)
+    for _, category in ipairs(categoryConfigs) do
         weightedCategories[#weightedCategories + 1] = {
             value = category,
             weight = rarityWeight(category.rarity),
@@ -336,10 +405,12 @@ function LuckyChestLogic.applyChestSpin(
     local nextRebirths = rebirths + rebirthsGranted
 
     if category.id == 'hat' then
+        -- TODO: Safe server-side hat equip flow should validate Accessory attachment before use.
         nextProfileData.unlockedHats[#nextProfileData.unlockedHats + 1] = item.id
     elseif category.id == 'pet' then
         nextProfileData.unlockedPets[#nextProfileData.unlockedPets + 1] = item.id
     elseif category.id == 'vehicleMount' then
+        -- TODO: Safe server-owned mount spawning should validate model PrimaryPart/Seat before use.
         nextProfileData.unlockedVehicleMounts[#nextProfileData.unlockedVehicleMounts + 1] = item.id
     elseif category.id == 'scoreBoost' then
         nextProfileData.scoreBoostExpiresAt = nowUnixSeconds + scoreBoostDurationSeconds
