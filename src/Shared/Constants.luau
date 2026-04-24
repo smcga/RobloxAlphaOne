@@ -109,6 +109,8 @@ local Constants = {
     },
 
     SCORE_DATASTORE_NAME = 'PlayerScoreDataV2',
+    GLOBAL_TOP_SCORE_DATASTORE_NAME = 'GlobalTopScoreV1',
+    GLOBAL_TOP_SCORE_DATASTORE_KEY = 'globalTopScore',
     CUSTOM_REWARD_CATALOG_DATASTORE_NAME = 'CustomRewardCatalogV1',
     CUSTOM_REWARD_CATALOG_DATASTORE_KEY = 'global',
     CUSTOM_REWARD_CATALOG_MAX_REWARDS = 100,
@@ -263,6 +265,10 @@ local Constants = {
     REBIRTH_ZONE_CENTER = Vector3.new(-420, 1, 0),
     REBIRTH_ZONE_RADIUS = 10,
     REBIRTH_ZONE_HEIGHT = 4,
+
+    GLOBAL_TOP_SCORE_SCREEN_NAME = 'GlobalTopScoreScreen',
+    GLOBAL_TOP_SCORE_SCREEN_SIZE = Vector3.new(160, 48, 3),
+    GLOBAL_TOP_SCORE_SCREEN_OFFSET = Vector3.new(0, 92, 30),
     SPAWN_LOCATION_NAME = 'AgeOfBeadsSpawn',
     SPAWN_LOCATION_SIZE = Vector3.new(16, 1, 16),
     SPAWN_LOCATION_OFFSET = Vector3.new(0, 3, 24),
