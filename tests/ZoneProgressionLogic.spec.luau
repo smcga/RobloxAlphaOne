@@ -189,3 +189,39 @@ runCase('rebirth resets accumulated partial time across all ages', function()
     expectEqual(rebirthed.state.score, 0, 'rebirth should reset score to zero')
     expectEqual(afterRebirth.state.score, 0, 'partial age timers should reset on rebirth')
 end)
+
+runCase('rebirth zone does not grant rebirth when score is below rebirth requirement', function()
+    local result = tick(ZoneProgressionLogic.newState(1000, 0, 1000, 2, 1), {
+        isInsideRebirthZone = true,
+        rebirthConfig = {
+            baseRequirementScore = 1200,
+            requirementGrowthPerRebirth = 350,
+            scoreToBonusPower = 0.72,
+            scoreToBonusScale = 2.6,
+            maxBonusRebirthsFromScore = 20,
+            hourlyFinalZoneBonus = {
+                chancePerHour = 0.35,
+                activeWindowSeconds = 180,
+                bonusRebirths = 2,
+            },
+        },
+        nowUnixTime = 0,
+        isInsideFinalAgeZone = false,
+    })
+
+    expectEqual(result.state.score, 1000, 'failed rebirth should keep score unchanged')
+    expectEqual(result.state.rebirths, 0, 'failed rebirth should not grant rebirths')
+end)
+
+runCase('rank multiplier contributes to score gain', function()
+    local result = tick(ZoneProgressionLogic.newState(0, 0, 500, 2, 2), {
+        isInsideAgeZones = {
+            true,
+            false,
+            false,
+        },
+        rankScoreMultiplier = 1.2,
+    })
+
+    expectEqual(result.state.score, 1.2, 'rank multiplier should scale zone score increment')
+end)

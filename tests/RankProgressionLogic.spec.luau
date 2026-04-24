@@ -66,3 +66,18 @@ runCase('getRankProgress returns maxed state when highest rank is reached', func
     expectEqual(rankProgress.nextRankName, nil, 'no next rank should exist at cap')
     expectEqual(rankProgress.progressAlpha, 1, 'max rank progress alpha should be full')
 end)
+
+runCase('rank multiplier starts at 1x for first rank', function()
+    local multiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(1, 0.01)
+    expectEqual(multiplier, 1, 'first rank multiplier should be 1x')
+end)
+
+runCase('rank multiplier increases linearly by configured step', function()
+    local multiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(6, 0.02)
+    expectEqual(multiplier, 1.1, 'rank 6 with 2% step should be 1.1x')
+end)
+
+runCase('score-based multiplier resolves from unlocked rank', function()
+    local multiplier = RankProgressionLogic.getScoreMultiplierForScore(1800, rankConfigs, 0.05)
+    expectEqual(multiplier, 1.05, 'second rank should apply one multiplier step')
+end)

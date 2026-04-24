@@ -91,4 +91,22 @@ function RankProgressionLogic.getRankProgress(
     }
 end
 
+function RankProgressionLogic.getScoreMultiplierForRankIndex(
+    rankIndex: number,
+    multiplierStep: number
+): number
+    local sanitizedRankIndex = math.max(1, math.floor(rankIndex))
+    local sanitizedStep = math.max(multiplierStep, 0)
+    return 1 + ((sanitizedRankIndex - 1) * sanitizedStep)
+end
+
+function RankProgressionLogic.getScoreMultiplierForScore(
+    score: number,
+    rankConfigs: { RankConfig },
+    multiplierStep: number
+): number
+    local rankIndex = RankProgressionLogic.getCurrentRankIndex(score, rankConfigs)
+    return RankProgressionLogic.getScoreMultiplierForRankIndex(rankIndex, multiplierStep)
+end
+
 return RankProgressionLogic

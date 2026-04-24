@@ -4,6 +4,7 @@ local SoundService = game:GetService('SoundService')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
+local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
 local WorldDecorLogic = require(Shared:WaitForChild('WorldDecorLogic'))
 
 local WorldBuilder = {}
@@ -402,7 +403,7 @@ local function ensureZoneLabel(zone: BasePart, text: string, isVisible: boolean)
     end
 
     billboardGui.AlwaysOnTop = true
-    billboardGui.Size = UDim2.fromOffset(220, 64)
+    billboardGui.Size = UDim2.fromOffset(280, 92)
     billboardGui.StudsOffset = Vector3.new(0, 6, 0)
     billboardGui.Enabled = isVisible
 
@@ -426,7 +427,17 @@ local function ensureZoneLabel(zone: BasePart, text: string, isVisible: boolean)
     label.TextScaled = true
     label.TextStrokeTransparency = 0.2
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextWrapped = true
+    label.RichText = true
     label.Text = text
+end
+
+local function formatMultiplier(value: number): string
+    if value < 1000 then
+        return string.format('%.2f', value):gsub('%.?0+$', '')
+    end
+
+    return NumberFormat.formatCompact(value)
 end
 
 local function ensureAgeOfBeadsSpawn(workspaceRoot: Instance)
@@ -585,7 +596,13 @@ function WorldBuilder.build(workspaceRoot: Instance)
         )
         zone:SetAttribute('RequiredScore', zoneConfig.requiredScore)
         zone:SetAttribute('DisplayName', zoneConfig.displayName)
-        ensureZoneLabel(zone, zoneConfig.displayName, zoneConfig.requiredScore <= 0)
+        local multiplierText = formatMultiplier(zoneConfig.scoreMultiplierDisplay or 1)
+        local labelText = string.format(
+            '%s\n<font size="18">Score x%s</font>',
+            zoneConfig.displayName,
+            multiplierText
+        )
+        ensureZoneLabel(zone, labelText, zoneConfig.requiredScore <= 0)
     end
 
     local rebirthZone = ensureZone(
@@ -598,7 +615,11 @@ function WorldBuilder.build(workspaceRoot: Instance)
         Color3.fromRGB(255, 214, 255)
     )
 
-    ensureZoneLabel(rebirthZone, 'Rebirth', true)
+    ensureZoneLabel(
+        rebirthZone,
+        'Rebirth\n<font size="18">Step inside to convert score into rebirths</font>',
+        true
+    )
 end
 
 return WorldBuilder
