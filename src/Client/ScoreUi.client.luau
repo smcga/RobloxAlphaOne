@@ -1,6 +1,8 @@
 local Players = game:GetService('Players')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
 local TweenService = game:GetService('TweenService')
+local Lighting = game:GetService('Lighting')
+local RunService = game:GetService('RunService')
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild('PlayerGui')
@@ -14,6 +16,7 @@ local RebirthLogic = require(Shared:WaitForChild('RebirthLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ScorePopupLogic = require(Shared:WaitForChild('ScorePopupLogic'))
 local ZoneUnlockUiLogic = require(Shared:WaitForChild('ZoneUnlockUiLogic'))
+local ZoneSkyLogic = require(Shared:WaitForChild('ZoneSkyLogic'))
 
 local RARITY_COLORS = {
     green = Color3.fromRGB(126, 211, 122),
@@ -372,6 +375,63 @@ local availableHats = {}
 local availableVehicleMounts = {}
 local equippedHatId: string? = nil
 local equippedVehicleMountId: string? = nil
+
+local SKY_TINT_EFFECT_NAME = 'ZoneSkyTintEffect'
+local SKY_TINT_STRENGTH = 0.42
+local SKY_TINT_UPDATE_INTERVAL_SECONDS = 0.15
+local SKY_NEUTRAL_TINT = Color3.fromRGB(255, 255, 255)
+
+local skyTintEffect = Lighting:FindFirstChild(SKY_TINT_EFFECT_NAME)
+if not skyTintEffect or not skyTintEffect:IsA('ColorCorrectionEffect') then
+    if skyTintEffect then
+        skyTintEffect:Destroy()
+    end
+
+    skyTintEffect = Instance.new('ColorCorrectionEffect')
+    skyTintEffect.Name = SKY_TINT_EFFECT_NAME
+    skyTintEffect.Parent = Lighting
+end
+
+skyTintEffect.Enabled = true
+skyTintEffect.TintColor = SKY_NEUTRAL_TINT
+
+local lastSkyZoneIndex: number? = nil
+local skyUpdateClockAccumulator = SKY_TINT_UPDATE_INTERVAL_SECONDS
+
+local function updateSkyTintFromCharacterPosition(character: Model?)
+    local rootPart = character and character:FindFirstChild('HumanoidRootPart')
+    if not rootPart or not rootPart:IsA('BasePart') then
+        if lastSkyZoneIndex ~= nil then
+            lastSkyZoneIndex = nil
+            skyTintEffect.TintColor = SKY_NEUTRAL_TINT
+        end
+        return
+    end
+
+    local zoneIndex =
+        ZoneSkyLogic.getCurrentZoneIndex(rootPart.Position, Constants.AGE_ZONE_CONFIGS)
+    if zoneIndex == lastSkyZoneIndex then
+        return
+    end
+
+    lastSkyZoneIndex = zoneIndex
+    skyTintEffect.TintColor = ZoneSkyLogic.getSkyTintColor(
+        zoneIndex,
+        Constants.AGE_ZONE_CONFIGS,
+        SKY_NEUTRAL_TINT,
+        SKY_TINT_STRENGTH
+    )
+end
+
+RunService.RenderStepped:Connect(function(deltaTime: number)
+    skyUpdateClockAccumulator += deltaTime
+    if skyUpdateClockAccumulator < SKY_TINT_UPDATE_INTERVAL_SECONDS then
+        return
+    end
+
+    skyUpdateClockAccumulator = 0
+    updateSkyTintFromCharacterPosition(player.Character)
+end)
 
 local function updateAgeZoneLabelVisibility(score: number)
     for _, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
