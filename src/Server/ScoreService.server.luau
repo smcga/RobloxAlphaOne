@@ -16,6 +16,7 @@ local GlobalTopScoreLogic = require(Shared:WaitForChild('GlobalTopScoreLogic'))
 local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local RankAuraLogic = require(Shared:WaitForChild('RankAuraLogic'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
+local RebirthLogic = require(Shared:WaitForChild('RebirthLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local RewardCatalogLogic = require(Shared:WaitForChild('RewardCatalogLogic'))
 local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
@@ -594,6 +595,19 @@ end
 local function pushScore(player: Player, score: number, rebirths: number)
     scoreUpdatedEvent:FireClient(player, score, rebirths)
 end
+
+local REBIRTH_CONFIG: RebirthLogic.RebirthConfig = {
+    baseRequirementScore = Constants.REBIRTH_BASE_REQUIREMENT_SCORE,
+    requirementGrowthPerRebirth = Constants.REBIRTH_REQUIREMENT_GROWTH_PER_REBIRTH,
+    scoreToBonusPower = Constants.REBIRTH_SCORE_TO_BONUS_POWER,
+    scoreToBonusScale = Constants.REBIRTH_SCORE_TO_BONUS_SCALE,
+    maxBonusRebirthsFromScore = Constants.REBIRTH_MAX_BONUS_FROM_SCORE,
+    hourlyFinalZoneBonus = {
+        chancePerHour = Constants.REBIRTH_HOURLY_FINAL_ZONE_BONUS_CHANCE,
+        activeWindowSeconds = Constants.REBIRTH_HOURLY_FINAL_ZONE_BONUS_WINDOW_SECONDS,
+        bonusRebirths = Constants.REBIRTH_HOURLY_FINAL_ZONE_BONUS_REBIRTHS,
+    },
+}
 
 local function getGlobalTopScoreLabel(): TextLabel?
     local screenPart = workspace:FindFirstChild(Constants.GLOBAL_TOP_SCORE_SCREEN_NAME)
@@ -1517,6 +1531,14 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             maxCatchUpMultiplier = Constants.MAX_CATCH_UP_MULTIPLIER,
             postRecordRebirthMultiplier = Constants.POST_RECORD_REBIRTH_MULTIPLIER,
             bonusScoreMultiplier = boostedMultiplier,
+            rankScoreMultiplier = RankProgressionLogic.getScoreMultiplierForScore(
+                state.progressionState.score,
+                Constants.RANK_CONFIGS,
+                Constants.RANK_SCORE_MULTIPLIER_STEP
+            ),
+            rebirthConfig = REBIRTH_CONFIG,
+            nowUnixTime = os.time(),
+            isInsideFinalAgeZone = isInsideAgeZones[#Constants.AGE_ZONE_CONFIGS] == true,
         })
 
         if

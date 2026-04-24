@@ -100,6 +100,7 @@ local RANK_NAMES = {
 local ProgressionBalance = require('./ProgressionBalance')
 
 local GENERATED_RANK_CONFIGS, GENERATED_AGE_BALANCE_CONFIGS = ProgressionBalance.build(RANK_NAMES)
+local BASE_AGE_SCORE_INCREMENT = GENERATED_AGE_BALANCE_CONFIGS[1].scoreIncrement
 local Constants = {
     SCORE_INTERVAL_SECONDS = 1,
 
@@ -128,6 +129,16 @@ local Constants = {
     REBIRTH_CATCH_UP_PER_REBIRTH = ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH,
     MAX_CATCH_UP_MULTIPLIER = ProgressionBalance.MAX_CATCH_UP_MULTIPLIER,
     POST_RECORD_REBIRTH_MULTIPLIER = ProgressionBalance.POST_RECORD_REBIRTH_MULTIPLIER,
+    RANK_SCORE_MULTIPLIER_STEP = 0.01,
+
+    REBIRTH_BASE_REQUIREMENT_SCORE = 1_200,
+    REBIRTH_REQUIREMENT_GROWTH_PER_REBIRTH = 350,
+    REBIRTH_SCORE_TO_BONUS_POWER = 0.72,
+    REBIRTH_SCORE_TO_BONUS_SCALE = 2.6,
+    REBIRTH_MAX_BONUS_FROM_SCORE = 20,
+    REBIRTH_HOURLY_FINAL_ZONE_BONUS_CHANCE = 0.35,
+    REBIRTH_HOURLY_FINAL_ZONE_BONUS_WINDOW_SECONDS = 180,
+    REBIRTH_HOURLY_FINAL_ZONE_BONUS_REBIRTHS = 2,
 
     RANK_CONFIGS = GENERATED_RANK_CONFIGS,
 
@@ -137,6 +148,8 @@ local Constants = {
             displayName = 'Age of Beads',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[1].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[1].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[1].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(-330, 1, -60),
             radius = 16,
             height = 4,
@@ -148,6 +161,8 @@ local Constants = {
             displayName = 'Age of Brass',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[2].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[2].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[2].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(-270, 1, 60),
             radius = 16,
             height = 4,
@@ -159,6 +174,8 @@ local Constants = {
             displayName = 'Age of Relays',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[3].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[3].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[3].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(-210, 1, -60),
             radius = 16,
             height = 4,
@@ -170,6 +187,8 @@ local Constants = {
             displayName = 'Age of Tubes',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[4].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[4].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[4].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(-150, 1, 60),
             radius = 16,
             height = 4,
@@ -181,6 +200,8 @@ local Constants = {
             displayName = 'Age of Transistors',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[5].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[5].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[5].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(-90, 1, -60),
             radius = 16,
             height = 4,
@@ -192,6 +213,8 @@ local Constants = {
             displayName = 'Age of Silicon',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[6].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[6].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[6].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(-30, 1, 60),
             radius = 16,
             height = 4,
@@ -203,6 +226,8 @@ local Constants = {
             displayName = 'Age of Personal Computing',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[7].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[7].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[7].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(30, 1, -60),
             radius = 16,
             height = 4,
@@ -214,6 +239,8 @@ local Constants = {
             displayName = 'Age of Networks',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[8].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[8].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[8].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(90, 1, 60),
             radius = 16,
             height = 4,
@@ -225,6 +252,8 @@ local Constants = {
             displayName = 'Age of Cloud and Mobile',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[9].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[9].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[9].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(150, 1, -60),
             radius = 16,
             height = 4,
@@ -236,6 +265,8 @@ local Constants = {
             displayName = 'Age of Machine Minds',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[10].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[10].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[10].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(210, 1, 60),
             radius = 16,
             height = 4,
@@ -247,6 +278,8 @@ local Constants = {
             displayName = 'Age of Autonomous Order',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[11].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[11].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[11].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(270, 1, -60),
             radius = 16,
             height = 4,
@@ -258,6 +291,8 @@ local Constants = {
             displayName = 'Age Beyond Humanity',
             requiredScore = GENERATED_AGE_BALANCE_CONFIGS[12].requiredScore,
             scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[12].scoreIncrement,
+            scoreMultiplierDisplay = GENERATED_AGE_BALANCE_CONFIGS[12].scoreIncrement
+                / BASE_AGE_SCORE_INCREMENT,
             center = Vector3.new(330, 1, 60),
             radius = 16,
             height = 4,

@@ -4,7 +4,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 
 ## What this project does
 - Spawns players into a stylized starter world with a baseplate, hills, paths, Creator Store tree assets ("Realistic Trees", asset `3256343670`), flower bush assets ("Realistic bush flowers mesh", asset `9187138703`), and an `Age of Beads` rock/grass decor cluster using Creator Store assets (`4038061999`, `2846635652`, `9217425479`, `4453595550`, `13785580624`, `1925262929`, `16170402764`) plus deterministic path/hill/rock props built from decor specs.
-- Creates visible glowing circular scoring zones across 12 progression ages, while each age's floating name stays hidden until that age is unlocked by score.
+- Creates visible glowing circular scoring zones across 12 progression ages, while each age's floating name stays hidden until that age is unlocked by score and shows each zone's score multiplier.
 - Spawns players at an `Age of Beads`-side spawn pad instead of the world center.
 - Plays looping background music from `assets/Ascension.mp3` (`rbxasset://assets/Ascension.mp3`).
 - Shows `Score: 0` UI on join/spawn.
@@ -12,7 +12,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Shows `Rebirths: 0` UI under score on join/spawn.
 - Shows a live next-unlock tracker (for example `Next: Age of Brass at 600 (595 to go)`) so players can clearly see the score needed for the next age.
 - Adds a 96-rank secondary progression track spanning 12 historical ages (8 ranks per age), with themed rank names configured in shared constants.
-- Shows a rank UI panel with current rank name, a per-rank progress bar, and compact progress text toward the next rank.
+- Shows a rank UI panel with current rank name, a per-rank progress bar, and compact progress text toward the next rank including current and next rank score multipliers.
 - Displays each player's current rank title above their character's head so other players can see progression at a glance.
 - Grants every rank a unique aura style that ramps up in spectacle with stronger glow, denser particles, animated pulsing light, and scale growth as players climb toward max rank.
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
@@ -21,13 +21,12 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Adds a server-authoritative Rewards inventory panel where players can view unlocked hats/mounts, equip one hat, equip one vehicle mount, and unequip either slot.
 - Equips Lucky Chest hats by loading Creator Store assets server-side (with script descendants removed) and attaching safe visuals to the avatar; current temporary forced hat asset is `Classic Cowboy hat` (`17075928250`) for all hat rewards.
 - Equips Lucky Chest vehicle mounts as sanitized server-spawned visual models welded to the player, with a modest server-controlled movement speed boost while mounted; current temporary forced mount asset is `Drift Car mobile` (`15244136642`) for all mount rewards.
-- Increments score while inside age zones, with each age granting a higher score-per-second multiplier.
-- Applies a rebirth multiplier to score gain (`max(Rebirths, 1)`), so `2` rebirths means `2x` score/sec.
+- Increments score while inside age zones, with each age granting a higher score-per-second multiplier and rank multiplier layering on top.
 - Unlock requirements and score gains scale so each age takes roughly the same active time to complete while totals grow exponentially.
-- Entering the glowing `Rebirth` zone converts score into rebirths (`+1` per `1000` score) and resets score to `0`.
 - Increments score while inside age zones, with generated non-linear rank/age requirements and per-age score-per-second values derived from a shared progression curve.
 - A fresh no-rebirth run targets rank transition times of `30s, 40s, 50s, ...` while players stay in their highest unlocked age zone.
-- Entering the glowing `Rebirth` zone now grants exactly `+1` rebirth, resets current score to `0`, preserves highest achieved milestones, and applies a temporary catch-up multiplier until players return to their prior best score.
+- Entering the glowing `Rebirth` zone now uses a visible score cost, grants rebirths based on how much score you banked (with diminishing returns), resets current score to `0`, preserves highest achieved milestones, and applies temporary catch-up acceleration until players return to their prior best score.
+- During deterministic hourly bonus windows, rebirthing from the final age zone grants extra rebirths for high-risk/high-reward timing.
 - Entering a locked age zone before meeting its score requirement now flings the player away, kills them, plays a global death SFX, and bursts a cloud of `Nope!` text particles.
 - Stops score gain immediately when leaving each zone.
 - Adds a server-authoritative Lucky Chest system: once every 5 minutes players can open a chest that spins category then reward item with green/blue/purple/orange/gold rarity odds and can grant score, rebirths, hats, pets, vehicle mounts, or a 1-minute 10x score boost.
@@ -150,7 +149,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
    - Rebirth grants temporary catch-up acceleration below your previous best score, then progression returns to the baseline timing curve after you catch up.
    - Age zones unlock in sequence as your score passes each requirement threshold.
-   - Entering the `Rebirth` zone resets score to `0`, grants exactly `+1` rebirth, and preserves highest achieved score/rank/age milestones for catch-up pacing.
+   - Entering the `Rebirth` zone shows the current rebirth score cost, resets score to `0` only when that cost is met, grants rebirths based on banked score, and preserves highest achieved score/rank/age milestones for catch-up pacing.
    - A giant floating screen above the rebirth area shows the current all-time top scorer name and best-ever score across all players.
    - Entering a still-locked age zone flings you away, then kills you, while preserving your existing score/rebirth totals.
    - Locked-zone deaths play a shared SFX for everyone and spawn flying `Nope!` text particles around the punished player.

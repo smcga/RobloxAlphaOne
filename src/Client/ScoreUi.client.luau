@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage:WaitForChild('Shared')
 local Constants = require(Shared:WaitForChild('Constants'))
 local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
+local RebirthLogic = require(Shared:WaitForChild('RebirthLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ScorePopupLogic = require(Shared:WaitForChild('ScorePopupLogic'))
 local ZoneUnlockUiLogic = require(Shared:WaitForChild('ZoneUnlockUiLogic'))
@@ -320,6 +321,45 @@ local function updateAgeZoneLabelVisibility(score: number)
     end
 end
 
+local REBIRTH_CONFIG: RebirthLogic.RebirthConfig = {
+    baseRequirementScore = Constants.REBIRTH_BASE_REQUIREMENT_SCORE,
+    requirementGrowthPerRebirth = Constants.REBIRTH_REQUIREMENT_GROWTH_PER_REBIRTH,
+    scoreToBonusPower = Constants.REBIRTH_SCORE_TO_BONUS_POWER,
+    scoreToBonusScale = Constants.REBIRTH_SCORE_TO_BONUS_SCALE,
+    maxBonusRebirthsFromScore = Constants.REBIRTH_MAX_BONUS_FROM_SCORE,
+    hourlyFinalZoneBonus = {
+        chancePerHour = Constants.REBIRTH_HOURLY_FINAL_ZONE_BONUS_CHANCE,
+        activeWindowSeconds = Constants.REBIRTH_HOURLY_FINAL_ZONE_BONUS_WINDOW_SECONDS,
+        bonusRebirths = Constants.REBIRTH_HOURLY_FINAL_ZONE_BONUS_REBIRTHS,
+    },
+}
+
+local function updateRebirthZoneLabel(score: number, rebirths: number)
+    local rebirthZone = workspace:FindFirstChild(Constants.REBIRTH_ZONE_NAME)
+    if not rebirthZone or not rebirthZone:IsA('BasePart') then
+        return
+    end
+
+    local billboard = rebirthZone:FindFirstChild('ZoneBillboard')
+    if not billboard or not billboard:IsA('BillboardGui') then
+        return
+    end
+
+    local label = billboard:FindFirstChild('ZoneLabel')
+    if not label or not label:IsA('TextLabel') then
+        return
+    end
+
+    local requiredScore = RebirthLogic.getRequiredScore(rebirths, REBIRTH_CONFIG)
+    local previewGrant =
+        RebirthLogic.getPreviewGrant(score, rebirths, false, os.time(), REBIRTH_CONFIG)
+    label.Text = string.format(
+        'Rebirth\n<font size="18">Cost: %s score • Next grant: +%s rebirths</font>',
+        NumberFormat.formatCompact(requiredScore),
+        NumberFormat.formatCompact(previewGrant)
+    )
+end
+
 local function setScoreAndRebirths(score: number, rebirths: number)
     scoreLabel.Text = string.format('Score: %s', NumberFormat.formatCompact(score))
     rebirthsLabel.Text = string.format('Rebirths: %s', NumberFormat.formatCompact(rebirths))
@@ -329,23 +369,35 @@ local function setScoreAndRebirths(score: number, rebirths: number)
         NumberFormat.formatCompact
     )
     updateAgeZoneLabelVisibility(score)
+    updateRebirthZoneLabel(score, rebirths)
 
     local rankProgress = RankProgressionLogic.getRankProgress(score, Constants.RANK_CONFIGS)
     rankNameLabel.Text = rankProgress.currentRankName
     rankProgressFill.Size = UDim2.fromScale(rankProgress.progressAlpha, 1)
+    local currentRankMultiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(
+        rankProgress.currentRankIndex,
+        Constants.RANK_SCORE_MULTIPLIER_STEP
+    )
 
     if rankProgress.nextRankName and rankProgress.nextRankRequiredScore then
+        local nextRankMultiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(
+            rankProgress.nextRankIndex or rankProgress.currentRankIndex,
+            Constants.RANK_SCORE_MULTIPLIER_STEP
+        )
         local progressValue = rankProgress.scoreIntoCurrentRank
         local neededValue = rankProgress.nextRankRequiredScore
             - rankProgress.currentRankRequiredScore
         rankProgressTextLabel.Text = string.format(
-            '%s / %s to %s',
+            '%s / %s to %s • Rank bonus x%.2f → x%.2f',
             NumberFormat.formatCompact(progressValue),
             NumberFormat.formatCompact(neededValue),
-            rankProgress.nextRankName
+            rankProgress.nextRankName,
+            currentRankMultiplier,
+            nextRankMultiplier
         )
     else
-        rankProgressTextLabel.Text = 'Max rank reached'
+        rankProgressTextLabel.Text =
+            string.format('Max rank reached • Rank bonus x%.2f', currentRankMultiplier)
     end
 end
 
