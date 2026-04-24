@@ -57,3 +57,14 @@ runCase('accumulator remainder is preserved after full interval scoring', functi
     expectEqual(state.score, 14, 'two full intervals should apply increment twice')
     expectEqual(state.accumulatorSeconds, 0.25, 'remainder should be retained for next tick')
 end)
+
+runCase('zone and rank multipliers can be pre-multiplied into increment', function()
+    local state = ScoreLogic.newState(100)
+    local zoneMultiplier = 4
+    local rankMultiplier = 1.5
+    local perSecondBase = 2
+    local increment = perSecondBase * zoneMultiplier * rankMultiplier
+
+    state = ScoreLogic.tick(state, 2, true, 1, increment)
+    expectEqual(state.score, 124, 'score should apply pre-multiplied increment every interval')
+end)

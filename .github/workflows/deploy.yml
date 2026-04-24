@@ -3,9 +3,17 @@ name: Deploy
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: production
     steps:
       - name: Checkout
@@ -14,20 +22,54 @@ jobs:
       - name: Setup mise
         uses: jdx/mise-action@v2
 
+      - name: Cache Wally dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            .wally
+            Packages
+          key: ${{ runner.os }}-wally-${{ hashFiles('wally.toml', 'wally.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-wally-
+
       - name: Bootstrap environment
         run: ./scripts/setup_env.sh
 
       - name: Build place file
         run: mise exec -- rojo build default.project.json --output build.rbxlx
 
+      - name: Upload deploy artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-build-rbxlx
+          path: build.rbxlx
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verify deploy secrets are configured
+        id: secrets_check
+        env:
+          ROBLOX_UNIVERSE_ID: ${{ secrets.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ secrets.ROBLOX_PLACE_ID }}
+          ROBLOX_OPEN_CLOUD_API_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
+        run: |
+          if [[ -n "$ROBLOX_UNIVERSE_ID" && -n "$ROBLOX_PLACE_ID" && -n "$ROBLOX_OPEN_CLOUD_API_KEY" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Deploy secrets detected."
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Deploy secrets missing; skipping upload step."
+          fi
+
       - name: Upload place (placeholder)
+        if: steps.secrets_check.outputs.configured == 'true'
         env:
           ROBLOX_UNIVERSE_ID: ${{ secrets.ROBLOX_UNIVERSE_ID }}
           ROBLOX_PLACE_ID: ${{ secrets.ROBLOX_PLACE_ID }}
           ROBLOX_OPEN_CLOUD_API_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
         run: |
           echo "Manual scaffold only."
-          echo "Provide a trusted upload step/tool with your own Open Cloud credentials and place IDs."
+          echo "Replace this step with a trusted upload tool using your Open Cloud credentials."
           test -n "$ROBLOX_UNIVERSE_ID"
           test -n "$ROBLOX_PLACE_ID"
           test -n "$ROBLOX_OPEN_CLOUD_API_KEY"

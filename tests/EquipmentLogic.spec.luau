@@ -72,6 +72,28 @@ runCase('buildEquipmentStatePayload includes only unlocked entries', function()
     expectEqual(payload.equippedVehicleMountId, 'mount_gear_skimmer', 'mount equip should persist')
 end)
 
+runCase('buildEquipmentStatePayload clones unlocked arrays', function()
+    local lookup =
+        EquipmentLogic.buildRewardLookup(LuckyChestLogic.getEffectiveCategoryConfigs(customRewards))
+    local profileData = {
+        unlockedHats = { 'hat_copper_crown' },
+        unlockedVehicleMounts = { 'mount_gear_skimmer' },
+        equippedHatId = nil,
+        equippedVehicleMountId = nil,
+    }
+
+    local payload = EquipmentLogic.buildEquipmentStatePayload(profileData, lookup)
+    payload.unlockedHats[1] = 'mutated_hat'
+    payload.unlockedVehicleMounts[1] = 'mutated_mount'
+
+    expectEqual(profileData.unlockedHats[1], 'hat_copper_crown', 'hat list should be cloned')
+    expectEqual(
+        profileData.unlockedVehicleMounts[1],
+        'mount_gear_skimmer',
+        'mount list should be cloned'
+    )
+end)
+
 runCase('resolveAssetIdForEquip uses forced overrides when configured', function()
     local hatId = EquipmentLogic.resolveAssetIdForEquip({
         id = 'hat_copper_crown',
