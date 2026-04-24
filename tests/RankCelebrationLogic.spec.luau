@@ -40,6 +40,14 @@ runCase('getNewRankIndices returns each newly crossed rank', function()
     expectEqual(newRanks[3], 6, 'last crossed rank should match next rank')
 end)
 
+runCase('getNewRankIndices returns no ranks when rank does not increase', function()
+    local sameRank = RankCelebrationLogic.getNewRankIndices(6, 6)
+    local lowerRank = RankCelebrationLogic.getNewRankIndices(6, 4)
+
+    expectEqual(#sameRank, 0, 'same rank should not emit rank-up events')
+    expectEqual(#lowerRank, 0, 'lower rank should not emit rank-up events')
+end)
+
 runCase('buildRankUpEvent applies first-time popup duration', function()
     local event =
         RankCelebrationLogic.buildRankUpEvent(5, 'Market Reckoner', 'Quick sums.', 1, 25, true)
