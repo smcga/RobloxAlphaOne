@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(git -C "${PWD}" rev-parse --show-toplevel)"
 
 usage() {
   cat <<'USAGE'
@@ -40,7 +40,7 @@ done
 
 cd "$REPO_ROOT"
 
-run mise trust
+run mise trust "$REPO_ROOT/mise.toml"
 run mise install
 run mise exec -- wally install
 
