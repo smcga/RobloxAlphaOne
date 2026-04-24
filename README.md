@@ -13,6 +13,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Shows a live next-unlock tracker (for example `Next: Age of Brass at 600 (595 to go)`) so players can clearly see the score needed for the next age.
 - Adds a 96-rank secondary progression track spanning 12 historical ages (8 ranks per age), with themed rank names configured in shared constants.
 - Shows a rank UI panel with current rank name, a per-rank progress bar, and compact progress text toward the next rank including current and next rank score multipliers.
+- Shows a center-screen celebratory rank-up card with rank name, rank description, personal times reached, and global players-ever-reached totals; first-time rank unlocks linger longer than rebirth re-unlocks.
 - Displays each player's current rank title above their character's head so other players can see progression at a glance.
 - Grants every rank a unique aura style that ramps up in spectacle with stronger glow, denser particles, animated pulsing light, and scale growth as players climb toward max rank.
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
