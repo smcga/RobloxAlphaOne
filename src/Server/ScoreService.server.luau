@@ -9,6 +9,7 @@ local SoundService = game:GetService('SoundService')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local AdminLogic = require(Shared:WaitForChild('AdminLogic'))
+local AgeZoneRuntimeLogic = require(Shared:WaitForChild('AgeZoneRuntimeLogic'))
 local Constants = require(Shared:WaitForChild('Constants'))
 local EquipmentLogic = require(Shared:WaitForChild('EquipmentLogic'))
 local LuckyChestLogic = require(Shared:WaitForChild('LuckyChestLogic'))
@@ -1614,12 +1615,27 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
     for player, state in pairs(playerStates) do
         state.auraPulseClock += deltaSeconds
         local rootPart = getHumanoidRootPart(player)
+        local runtimeZoneSnapshotsByZoneName = {}
+        local runtimeAgeZoneConfigs = table.create(#Constants.AGE_ZONE_CONFIGS)
+        for _, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
+            local zonePart = workspace:FindFirstChild(zoneConfig.zoneName)
+            if zonePart and zonePart:IsA('BasePart') then
+                runtimeZoneSnapshotsByZoneName[zoneConfig.zoneName] = {
+                    position = zonePart.Position,
+                    size = zonePart.Size,
+                }
+            end
+        end
+        runtimeAgeZoneConfigs = AgeZoneRuntimeLogic.buildRuntimeConfigs(
+            Constants.AGE_ZONE_CONFIGS,
+            runtimeZoneSnapshotsByZoneName
+        )
         local isInsideAgeZones = {}
         local isInsideRebirthZone = false
         local lockedZoneIndex: number? = nil
 
         if rootPart then
-            for index, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
+            for index, zoneConfig in ipairs(runtimeAgeZoneConfigs) do
                 isInsideAgeZones[index] = ZoneLogic.isPositionInsideCircle(
                     rootPart.Position,
                     zoneConfig.center,
@@ -1634,20 +1650,20 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             lockedZoneIndex = LockedZonePenaltyLogic.getFirstLockedZoneIndex(
                 state.progressionState.score,
                 isInsideAgeZones,
-                Constants.AGE_ZONE_CONFIGS
+                runtimeAgeZoneConfigs
             )
             if lockedZoneIndex then
                 penalizeLockedZoneEntry(
                     player,
                     state,
                     rootPart,
-                    Constants.AGE_ZONE_CONFIGS[lockedZoneIndex]
+                    runtimeAgeZoneConfigs[lockedZoneIndex]
                 )
             end
         end
 
         local ageZoneProgressionConfigs = {}
-        for index, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
+        for index, zoneConfig in ipairs(runtimeAgeZoneConfigs) do
             ageZoneProgressionConfigs[index] = {
                 requiredScore = zoneConfig.requiredScore,
                 scoreIncrement = zoneConfig.scoreIncrement,
@@ -1678,7 +1694,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             ),
             rebirthConfig = REBIRTH_CONFIG,
             nowUnixTime = os.time(),
-            isInsideFinalAgeZone = isInsideAgeZones[#Constants.AGE_ZONE_CONFIGS] == true,
+            isInsideFinalAgeZone = isInsideAgeZones[#runtimeAgeZoneConfigs] == true,
         })
 
         if
