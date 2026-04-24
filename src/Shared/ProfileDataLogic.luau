@@ -11,6 +11,8 @@ export type ProfileData = {
     unlockedHats: { string },
     unlockedPets: { string },
     unlockedVehicleMounts: { string },
+    equippedHatId: string?,
+    equippedVehicleMountId: string?,
 }
 
 local ProfileDataLogic = {}
@@ -56,6 +58,20 @@ local function sanitizeStringArray(value: any): { string }
     return sanitized
 end
 
+local function sanitizeOptionalOwnedId(value: any, ownedIds: { string }): string?
+    if type(value) ~= 'string' or value == '' then
+        return nil
+    end
+
+    for _, ownedId in ipairs(ownedIds) do
+        if ownedId == value then
+            return value
+        end
+    end
+
+    return nil
+end
+
 function ProfileDataLogic.normalize(rawData: any): ProfileData
     if type(rawData) ~= 'table' then
         return {
@@ -69,9 +85,13 @@ function ProfileDataLogic.normalize(rawData: any): ProfileData
             unlockedHats = {},
             unlockedPets = {},
             unlockedVehicleMounts = {},
+            equippedHatId = nil,
+            equippedVehicleMountId = nil,
         }
     end
 
+    local unlockedHats = sanitizeStringArray(rawData.unlockedHats)
+    local unlockedVehicleMounts = sanitizeStringArray(rawData.unlockedVehicleMounts)
     local score = sanitizeWholeNumber(rawData.score)
     local derivedHighestRank = ProgressionBalance.getRankIndexForScore(score, RANK_CONFIGS)
     local derivedHighestAge = ProgressionBalance.getHighestUnlockedAgeIndex(score, AGE_CONFIGS)
@@ -90,13 +110,20 @@ function ProfileDataLogic.normalize(rawData: any): ProfileData
         ),
         nextLuckyChestOpenAt = sanitizeWholeNumber(rawData.nextLuckyChestOpenAt),
         scoreBoostExpiresAt = sanitizeWholeNumber(rawData.scoreBoostExpiresAt),
-        unlockedHats = sanitizeStringArray(rawData.unlockedHats),
+        unlockedHats = unlockedHats,
         unlockedPets = sanitizeStringArray(rawData.unlockedPets),
-        unlockedVehicleMounts = sanitizeStringArray(rawData.unlockedVehicleMounts),
+        unlockedVehicleMounts = unlockedVehicleMounts,
+        equippedHatId = sanitizeOptionalOwnedId(rawData.equippedHatId, unlockedHats),
+        equippedVehicleMountId = sanitizeOptionalOwnedId(
+            rawData.equippedVehicleMountId,
+            unlockedVehicleMounts
+        ),
     }
 end
 
 function ProfileDataLogic.toStoredValue(profileData: ProfileData): { [string]: any }
+    local unlockedHats = sanitizeStringArray(profileData.unlockedHats)
+    local unlockedVehicleMounts = sanitizeStringArray(profileData.unlockedVehicleMounts)
     local score = sanitizeWholeNumber(profileData.score)
     local derivedHighestRank = ProgressionBalance.getRankIndexForScore(score, RANK_CONFIGS)
     local derivedHighestAge = ProgressionBalance.getHighestUnlockedAgeIndex(score, AGE_CONFIGS)
@@ -118,9 +145,14 @@ function ProfileDataLogic.toStoredValue(profileData: ProfileData): { [string]: a
         ),
         nextLuckyChestOpenAt = sanitizeWholeNumber(profileData.nextLuckyChestOpenAt),
         scoreBoostExpiresAt = sanitizeWholeNumber(profileData.scoreBoostExpiresAt),
-        unlockedHats = sanitizeStringArray(profileData.unlockedHats),
+        unlockedHats = unlockedHats,
         unlockedPets = sanitizeStringArray(profileData.unlockedPets),
-        unlockedVehicleMounts = sanitizeStringArray(profileData.unlockedVehicleMounts),
+        unlockedVehicleMounts = unlockedVehicleMounts,
+        equippedHatId = sanitizeOptionalOwnedId(profileData.equippedHatId, unlockedHats),
+        equippedVehicleMountId = sanitizeOptionalOwnedId(
+            profileData.equippedVehicleMountId,
+            unlockedVehicleMounts
+        ),
     }
 end
 
