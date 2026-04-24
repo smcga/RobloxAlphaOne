@@ -25,6 +25,8 @@ export type LuckyChestProfileData = {
     unlockedHats: { string },
     unlockedPets: { string },
     unlockedVehicleMounts: { string },
+    equippedHatId: string?,
+    equippedVehicleMountId: string?,
 }
 
 export type LuckyChestSpinResult = {
@@ -212,6 +214,16 @@ local function cloneStringArray(values: { string }): { string }
     return cloned
 end
 
+local function addUniqueString(values: { string }, value: string)
+    for _, existing in ipairs(values) do
+        if existing == value then
+            return
+        end
+    end
+
+    values[#values + 1] = value
+end
+
 local function rarityWeight(rarity: LuckyChestRarity): number
     for _, entry in ipairs(RARITY_WEIGHTS) do
         if entry.value == rarity then
@@ -397,6 +409,8 @@ function LuckyChestLogic.applyChestSpin(
         unlockedHats = cloneStringArray(profileData.unlockedHats),
         unlockedPets = cloneStringArray(profileData.unlockedPets),
         unlockedVehicleMounts = cloneStringArray(profileData.unlockedVehicleMounts),
+        equippedHatId = profileData.equippedHatId,
+        equippedVehicleMountId = profileData.equippedVehicleMountId,
     }
 
     local scoreGranted = item.scoreAmount or 0
@@ -406,12 +420,12 @@ function LuckyChestLogic.applyChestSpin(
 
     if category.id == 'hat' then
         -- TODO: Safe server-side hat equip flow should validate Accessory attachment before use.
-        nextProfileData.unlockedHats[#nextProfileData.unlockedHats + 1] = item.id
+        addUniqueString(nextProfileData.unlockedHats, item.id)
     elseif category.id == 'pet' then
-        nextProfileData.unlockedPets[#nextProfileData.unlockedPets + 1] = item.id
+        addUniqueString(nextProfileData.unlockedPets, item.id)
     elseif category.id == 'vehicleMount' then
         -- TODO: Safe server-owned mount spawning should validate model PrimaryPart/Seat before use.
-        nextProfileData.unlockedVehicleMounts[#nextProfileData.unlockedVehicleMounts + 1] = item.id
+        addUniqueString(nextProfileData.unlockedVehicleMounts, item.id)
     elseif category.id == 'scoreBoost' then
         nextProfileData.scoreBoostExpiresAt = nowUnixSeconds + scoreBoostDurationSeconds
     end

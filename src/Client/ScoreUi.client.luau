@@ -114,7 +114,7 @@ rankProgressTextLabel.Parent = rankPanel
 
 local luckyChestPanel = Instance.new('Frame')
 luckyChestPanel.Name = 'LuckyChestPanel'
-luckyChestPanel.Size = UDim2.fromOffset(320, 108)
+luckyChestPanel.Size = UDim2.fromOffset(320, 154)
 luckyChestPanel.Position = UDim2.new(1, -336, 0, 16)
 luckyChestPanel.BackgroundTransparency = 0.22
 luckyChestPanel.BackgroundColor3 = Color3.fromRGB(25, 30, 40)
@@ -160,6 +160,100 @@ luckyChestButton.Parent = luckyChestPanel
 
 local luckyButtonCorner = corner:Clone()
 luckyButtonCorner.Parent = luckyChestButton
+
+local rewardsButton = luckyChestButton:Clone()
+rewardsButton.Name = 'RewardsButton'
+rewardsButton.Position = UDim2.fromOffset(16, 16 + 108)
+rewardsButton.Size = UDim2.fromOffset(160, 36)
+rewardsButton.BackgroundColor3 = Color3.fromRGB(70, 82, 128)
+rewardsButton.Text = 'Rewards'
+rewardsButton.Parent = luckyChestPanel
+
+local rewardsOverlay = Instance.new('TextButton')
+rewardsOverlay.Name = 'RewardsOverlay'
+rewardsOverlay.Size = UDim2.fromScale(1, 1)
+rewardsOverlay.BackgroundColor3 = Color3.fromRGB(8, 10, 14)
+rewardsOverlay.BackgroundTransparency = 0.35
+rewardsOverlay.AutoButtonColor = false
+rewardsOverlay.Text = ''
+rewardsOverlay.Visible = false
+rewardsOverlay.ZIndex = 10
+rewardsOverlay.Parent = screenGui
+
+local rewardsModal = Instance.new('Frame')
+rewardsModal.Name = 'RewardsModal'
+rewardsModal.Size = UDim2.fromOffset(540, 430)
+rewardsModal.AnchorPoint = Vector2.new(0.5, 0.5)
+rewardsModal.Position = UDim2.fromScale(0.5, 0.5)
+rewardsModal.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
+rewardsModal.BackgroundTransparency = 0.08
+rewardsModal.ZIndex = 11
+rewardsModal.Parent = rewardsOverlay
+corner:Clone().Parent = rewardsModal
+
+local rewardsTitle = Instance.new('TextLabel')
+rewardsTitle.Size = UDim2.fromOffset(508, 30)
+rewardsTitle.Position = UDim2.fromOffset(16, 10)
+rewardsTitle.BackgroundTransparency = 1
+rewardsTitle.Text = 'Rewards Inventory'
+rewardsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+rewardsTitle.TextXAlignment = Enum.TextXAlignment.Left
+rewardsTitle.Font = Enum.Font.GothamBold
+rewardsTitle.TextSize = 22
+rewardsTitle.ZIndex = 12
+rewardsTitle.Parent = rewardsModal
+
+local closeRewardsButton = Instance.new('TextButton')
+closeRewardsButton.Size = UDim2.fromOffset(110, 30)
+closeRewardsButton.Position = UDim2.fromOffset(414, 10)
+closeRewardsButton.BackgroundColor3 = Color3.fromRGB(90, 56, 56)
+closeRewardsButton.Text = 'Close'
+closeRewardsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeRewardsButton.Font = Enum.Font.GothamBold
+closeRewardsButton.TextSize = 14
+closeRewardsButton.ZIndex = 12
+closeRewardsButton.Parent = rewardsModal
+corner:Clone().Parent = closeRewardsButton
+
+local hatsLabel = rewardsTitle:Clone()
+hatsLabel.Size = UDim2.fromOffset(248, 24)
+hatsLabel.Position = UDim2.fromOffset(16, 48)
+hatsLabel.Text = 'Hats'
+hatsLabel.TextSize = 18
+hatsLabel.Parent = rewardsModal
+
+local mountsLabel = hatsLabel:Clone()
+mountsLabel.Position = UDim2.fromOffset(276, 48)
+mountsLabel.Text = 'Vehicle Mounts'
+mountsLabel.Parent = rewardsModal
+
+local hatsListFrame = Instance.new('ScrollingFrame')
+hatsListFrame.Size = UDim2.fromOffset(248, 286)
+hatsListFrame.Position = UDim2.fromOffset(16, 76)
+hatsListFrame.BackgroundColor3 = Color3.fromRGB(32, 38, 48)
+hatsListFrame.BackgroundTransparency = 0.1
+hatsListFrame.ScrollBarThickness = 8
+hatsListFrame.CanvasSize = UDim2.fromOffset(0, 0)
+hatsListFrame.ZIndex = 12
+hatsListFrame.Parent = rewardsModal
+corner:Clone().Parent = hatsListFrame
+
+local mountsListFrame = hatsListFrame:Clone()
+mountsListFrame.Position = UDim2.fromOffset(276, 76)
+mountsListFrame.Parent = rewardsModal
+
+local rewardsStatusLabel = Instance.new('TextLabel')
+rewardsStatusLabel.Size = UDim2.fromOffset(508, 40)
+rewardsStatusLabel.Position = UDim2.fromOffset(16, 374)
+rewardsStatusLabel.BackgroundTransparency = 1
+rewardsStatusLabel.Text = ''
+rewardsStatusLabel.TextWrapped = true
+rewardsStatusLabel.TextColor3 = Color3.fromRGB(200, 220, 255)
+rewardsStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+rewardsStatusLabel.Font = Enum.Font.Gotham
+rewardsStatusLabel.TextSize = 14
+rewardsStatusLabel.ZIndex = 12
+rewardsStatusLabel.Parent = rewardsModal
 
 local chestSpinOverlay = Instance.new('Frame')
 chestSpinOverlay.Name = 'ChestSpinOverlay'
@@ -208,6 +302,10 @@ chestRewardLabel.Parent = chestCenterPanel
 local nextLuckyChestOpenAt = 0
 local isChestSpinPlaying = false
 local previousScore: number? = nil
+local availableHats = {}
+local availableVehicleMounts = {}
+local equippedHatId: string? = nil
+local equippedVehicleMountId: string? = nil
 
 local function updateAgeZoneLabelVisibility(score: number)
     for _, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
@@ -412,6 +510,12 @@ local luckyChestOpenedEvent = Remotes.waitForLuckyChestOpenedEvent()
 local adminAddRewardRequestEvent = Remotes.waitForAdminAddRewardRequestEvent()
 local adminAddRewardResultEvent = Remotes.waitForAdminAddRewardResultEvent()
 local adminRewardCatalogUpdatedEvent = Remotes.waitForAdminRewardCatalogUpdatedEvent()
+local equipmentStateUpdatedEvent = Remotes.waitForEquipmentStateUpdatedEvent()
+local equipHatRequestEvent = Remotes.waitForEquipHatRequestEvent()
+local unequipHatRequestEvent = Remotes.waitForUnequipHatRequestEvent()
+local equipVehicleMountRequestEvent = Remotes.waitForEquipVehicleMountRequestEvent()
+local unequipVehicleMountRequestEvent = Remotes.waitForUnequipVehicleMountRequestEvent()
+local equipmentActionResultEvent = Remotes.waitForEquipmentActionResultEvent()
 
 local adminPanel = Instance.new('Frame')
 adminPanel.Name = 'AdminPanel'
@@ -673,6 +777,119 @@ local function clearAddRewardStatus()
     addRewardStatusLabel.Text = ''
 end
 
+local function clearList(frame: ScrollingFrame)
+    for _, child in ipairs(frame:GetChildren()) do
+        if child:IsA('GuiObject') and child.Name == 'RewardItem' then
+            child:Destroy()
+        end
+    end
+end
+
+local function renderRewardsList(
+    frame: ScrollingFrame,
+    rewards,
+    equippedId: string?,
+    onEquip: (string) -> (),
+    onUnequip: () -> ()
+)
+    clearList(frame)
+
+    if #rewards == 0 then
+        local emptyLabel = Instance.new('TextLabel')
+        emptyLabel.Name = 'RewardItem'
+        emptyLabel.Size = UDim2.fromOffset(frame.AbsoluteSize.X - 16, 36)
+        emptyLabel.Position = UDim2.fromOffset(8, 8)
+        emptyLabel.BackgroundTransparency = 1
+        emptyLabel.Text = 'No rewards unlocked yet.'
+        emptyLabel.TextColor3 = Color3.fromRGB(185, 185, 185)
+        emptyLabel.TextXAlignment = Enum.TextXAlignment.Left
+        emptyLabel.Font = Enum.Font.Gotham
+        emptyLabel.TextSize = 14
+        emptyLabel.ZIndex = 13
+        emptyLabel.Parent = frame
+        frame.CanvasSize = UDim2.fromOffset(0, 56)
+        return
+    end
+
+    local y = 8
+    for _, reward in ipairs(rewards) do
+        local row = Instance.new('Frame')
+        row.Name = 'RewardItem'
+        row.Size = UDim2.fromOffset(frame.AbsoluteSize.X - 16, 62)
+        row.Position = UDim2.fromOffset(8, y)
+        row.BackgroundColor3 = Color3.fromRGB(42, 46, 58)
+        row.ZIndex = 13
+        row.Parent = frame
+        corner:Clone().Parent = row
+
+        local nameLabel = Instance.new('TextLabel')
+        nameLabel.Size = UDim2.fromOffset(150, 22)
+        nameLabel.Position = UDim2.fromOffset(10, 8)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = reward.displayName
+        nameLabel.TextColor3 = RARITY_COLORS[reward.rarity] or Color3.fromRGB(255, 255, 255)
+        nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextSize = 14
+        nameLabel.ZIndex = 14
+        nameLabel.Parent = row
+
+        local rarityLabel = nameLabel:Clone()
+        rarityLabel.Position = UDim2.fromOffset(10, 30)
+        rarityLabel.Size = UDim2.fromOffset(120, 20)
+        rarityLabel.Font = Enum.Font.Gotham
+        rarityLabel.TextSize = 12
+        rarityLabel.Text = string.format('Rarity: %s', reward.rarity)
+        rarityLabel.Parent = row
+
+        local actionButton = Instance.new('TextButton')
+        actionButton.Size = UDim2.fromOffset(90, 28)
+        actionButton.Position = UDim2.fromOffset(row.Size.X.Offset - 102, 17)
+        actionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        actionButton.Font = Enum.Font.GothamBold
+        actionButton.TextSize = 12
+        actionButton.ZIndex = 14
+        actionButton.Parent = row
+        corner:Clone().Parent = actionButton
+
+        local isEquipped = equippedId == reward.id
+        actionButton.Text = isEquipped and 'Unequip' or 'Equip'
+        actionButton.BackgroundColor3 = isEquipped and Color3.fromRGB(120, 74, 54)
+            or Color3.fromRGB(53, 103, 62)
+        actionButton.Activated:Connect(function()
+            if isEquipped then
+                onUnequip()
+            else
+                onEquip(reward.id)
+            end
+        end)
+
+        y += 70
+    end
+
+    frame.CanvasSize = UDim2.fromOffset(0, y)
+end
+
+local function refreshRewardsUi()
+    renderRewardsList(hatsListFrame, availableHats, equippedHatId, function(rewardId: string)
+        equipHatRequestEvent:FireServer(rewardId)
+    end, function()
+        unequipHatRequestEvent:FireServer()
+    end)
+
+    renderRewardsList(
+        mountsListFrame,
+        availableVehicleMounts,
+        equippedVehicleMountId,
+        function(rewardId: string)
+            equipVehicleMountRequestEvent:FireServer(rewardId)
+        end,
+        function()
+            unequipVehicleMountRequestEvent:FireServer()
+        end
+    )
+end
+
 local function closeAddRewardModal()
     addRewardOverlay.Visible = false
     clearAddRewardStatus()
@@ -739,6 +956,19 @@ cancelAddRewardButton.Activated:Connect(function()
 end)
 
 addRewardOverlay.Activated:Connect(function()
+    -- Modal blocker: swallow background clicks without closing.
+end)
+
+rewardsButton.Activated:Connect(function()
+    rewardsOverlay.Visible = true
+    refreshRewardsUi()
+end)
+
+closeRewardsButton.Activated:Connect(function()
+    rewardsOverlay.Visible = false
+end)
+
+rewardsOverlay.Activated:Connect(function()
     -- Modal blocker: swallow background clicks without closing.
 end)
 
@@ -823,6 +1053,24 @@ luckyChestOpenedEvent.OnClientEvent:Connect(function(spinResult, serverNextLucky
     task.spawn(function()
         playChestSpinVisual(spinResult)
     end)
+end)
+
+equipmentStateUpdatedEvent.OnClientEvent:Connect(function(payload)
+    if typeof(payload) ~= 'table' then
+        return
+    end
+
+    availableHats = payload.availableHats or {}
+    availableVehicleMounts = payload.availableVehicleMounts or {}
+    equippedHatId = payload.equippedHatId
+    equippedVehicleMountId = payload.equippedVehicleMountId
+    refreshRewardsUi()
+end)
+
+equipmentActionResultEvent.OnClientEvent:Connect(function(success: boolean, message: string)
+    rewardsStatusLabel.Text = message or ''
+    rewardsStatusLabel.TextColor3 = success and Color3.fromRGB(180, 255, 187)
+        or Color3.fromRGB(255, 180, 180)
 end)
 
 task.spawn(function()
