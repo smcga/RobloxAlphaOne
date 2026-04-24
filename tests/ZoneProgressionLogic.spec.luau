@@ -67,6 +67,9 @@ runCase('standing in first age zone increments by one without rebirth catch-up',
 
     expectEqual(result.state.score, 1, 'first age zone should increment score by one')
     expectEqual(result.state.rebirths, 0, 'rebirths should start at zero')
+    if result.hasActiveScoringZone ~= true then
+        error('first age zone should report active scoring zone')
+    end
 end)
 
 runCase('catch-up multiplier applies when current score is below highest achieved score', function()
@@ -224,4 +227,43 @@ runCase('rank multiplier contributes to score gain', function()
     })
 
     expectEqual(result.state.score, 1.2, 'rank multiplier should scale zone score increment')
+end)
+
+runCase('locked zone does not count as active scoring zone', function()
+    local result = tick(ZoneProgressionLogic.newState(0), {
+        isInsideAgeZones = {
+            false,
+            true,
+            false,
+        },
+    })
+
+    if result.hasActiveScoringZone ~= false then
+        error('locked zone should not report active scoring zone')
+    end
+end)
+
+runCase('active scoring helper returns true for unlocked occupied zone', function()
+    local active = ZoneProgressionLogic.getHasActiveScoringZone(600, {
+        false,
+        true,
+        false,
+    }, {
+        {
+            requiredScore = 0,
+            scoreIncrement = 1,
+        },
+        {
+            requiredScore = 100,
+            scoreIncrement = 50,
+        },
+        {
+            requiredScore = 1000,
+            scoreIncrement = 500,
+        },
+    })
+
+    if active ~= true then
+        error('unlocked occupied zone should be active')
+    end
 end)

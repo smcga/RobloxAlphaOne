@@ -36,9 +36,24 @@ export type ZoneProgressionInput = {
 
 export type ZoneProgressionResult = {
     state: ZoneProgressionState,
+    hasActiveScoringZone: boolean,
 }
 
 local ZoneProgressionLogic = {}
+
+function ZoneProgressionLogic.getHasActiveScoringZone(
+    score: number,
+    isInsideAgeZones: { [number]: boolean },
+    ageZoneConfigs: { AgeZoneProgressionConfig }
+): boolean
+    for index, zoneConfig in ipairs(ageZoneConfigs) do
+        if isInsideAgeZones[index] == true and score >= zoneConfig.requiredScore then
+            return true
+        end
+    end
+
+    return false
+end
 
 function ZoneProgressionLogic.newState(
     initialScore: number?,
@@ -65,6 +80,11 @@ function ZoneProgressionLogic.tick(
     state: ZoneProgressionState,
     input: ZoneProgressionInput
 ): ZoneProgressionResult
+    local hasActiveScoringZone = ZoneProgressionLogic.getHasActiveScoringZone(
+        state.score,
+        input.isInsideAgeZones,
+        input.ageZoneConfigs
+    )
     local catchUpPerRebirth = input.rebirthCatchUpPerRebirth
         or ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH
     local maxCatchUpMultiplier = input.maxCatchUpMultiplier
@@ -151,6 +171,7 @@ function ZoneProgressionLogic.tick(
             ageAccumulatorSeconds = ageAccumulatorSeconds,
             wasInsideRebirthZone = input.isInsideRebirthZone,
         },
+        hasActiveScoringZone = hasActiveScoringZone,
     }
 end
 

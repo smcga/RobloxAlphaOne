@@ -54,10 +54,17 @@ rebirthsLabel.Position = UDim2.fromOffset(16, 72)
 rebirthsLabel.Text = 'Rebirths: 0'
 rebirthsLabel.Parent = screenGui
 
+local scoringStatusLabel = scoreLabel:Clone()
+scoringStatusLabel.Name = 'ScoringStatusLabel'
+scoringStatusLabel.Position = UDim2.fromOffset(16, 128)
+scoringStatusLabel.TextSize = 20
+scoringStatusLabel.Text = 'Scoring: idle'
+scoringStatusLabel.Parent = screenGui
+
 local nextUnlockLabel = scoreLabel:Clone()
 nextUnlockLabel.Name = 'NextUnlockLabel'
 nextUnlockLabel.Size = UDim2.fromOffset(460, 48)
-nextUnlockLabel.Position = UDim2.fromOffset(16, 128)
+nextUnlockLabel.Position = UDim2.fromOffset(16, 184)
 nextUnlockLabel.TextSize = 18
 nextUnlockLabel.Text = 'Next: Age of Brass at 600 (600 to go)'
 nextUnlockLabel.Parent = screenGui
@@ -65,7 +72,7 @@ nextUnlockLabel.Parent = screenGui
 local rankPanel = Instance.new('Frame')
 rankPanel.Name = 'RankPanel'
 rankPanel.Size = UDim2.fromOffset(460, 88)
-rankPanel.Position = UDim2.fromOffset(16, 184)
+rankPanel.Position = UDim2.fromOffset(16, 240)
 rankPanel.BackgroundTransparency = 0.3
 rankPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 rankPanel.Parent = screenGui
@@ -525,6 +532,78 @@ local function setScoreAndRebirths(score: number, rebirths: number)
             string.format('Max rank reached • Rank bonus x%.2f', currentRankMultiplier)
     end
 end
+
+local activeScoreParticleAttachment: Attachment? = nil
+local isScoringZoneActive = false
+
+local function destroyScoreParticleAttachment()
+    if activeScoreParticleAttachment then
+        activeScoreParticleAttachment:Destroy()
+        activeScoreParticleAttachment = nil
+    end
+end
+
+local function getHumanoidRootPart(character: Model?): BasePart?
+    if not character then
+        return nil
+    end
+
+    local rootPart = character:FindFirstChild('HumanoidRootPart')
+    if rootPart and rootPart:IsA('BasePart') then
+        return rootPart
+    end
+
+    return nil
+end
+
+local function ensureScoreParticleAttachment()
+    if activeScoreParticleAttachment then
+        return
+    end
+
+    local rootPart = getHumanoidRootPart(player.Character)
+    if not rootPart then
+        return
+    end
+
+    local attachment = Instance.new('Attachment')
+    attachment.Name = 'ScoreParticleAttachment'
+    attachment.Parent = rootPart
+
+    local emitter = Instance.new('ParticleEmitter')
+    emitter.Name = 'ScoreParticleEmitter'
+    emitter.Color = ColorSequence.new(Color3.fromRGB(255, 219, 92), Color3.fromRGB(255, 255, 255))
+    emitter.LightEmission = 0.7
+    emitter.Lifetime = NumberRange.new(0.4, 0.8)
+    emitter.Rate = 14
+    emitter.Speed = NumberRange.new(2, 4)
+    emitter.SpreadAngle = Vector2.new(20, 20)
+    emitter.RotSpeed = NumberRange.new(-90, 90)
+    emitter.Texture = 'rbxasset://textures/particles/sparkles_main.dds'
+    emitter.Parent = attachment
+
+    activeScoreParticleAttachment = attachment
+end
+
+local function setScoringZoneActive(hasActiveScoringZone: boolean)
+    isScoringZoneActive = hasActiveScoringZone
+    if isScoringZoneActive then
+        scoringStatusLabel.Text = 'Scoring: active'
+        scoringStatusLabel.TextColor3 = Color3.fromRGB(152, 255, 167)
+        ensureScoreParticleAttachment()
+    else
+        scoringStatusLabel.Text = 'Scoring: idle'
+        scoringStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        destroyScoreParticleAttachment()
+    end
+end
+
+player.CharacterAdded:Connect(function()
+    destroyScoreParticleAttachment()
+    if isScoringZoneActive then
+        task.defer(ensureScoreParticleAttachment)
+    end
+end)
 
 local POPUP_WIDTH = 160
 local POPUP_HEIGHT = 60
@@ -1295,24 +1374,27 @@ luckyChestButton.Activated:Connect(function()
     luckyChestOpenRequestEvent:FireServer()
 end)
 
-scoreUpdatedEvent.OnClientEvent:Connect(function(score: number, rebirths: number, rankUpEvents)
-    local increase = ScorePopupLogic.getPositiveIncrease(previousScore, score)
-    if increase then
-        showScoreIncreasePopup(increase)
-    end
-
-    previousScore = score
-    setScoreAndRebirths(score, rebirths)
-
-    if typeof(rankUpEvents) == 'table' then
-        for _, rankUpEvent in ipairs(rankUpEvents) do
-            rankUpQueue[#rankUpQueue + 1] = rankUpEvent
+scoreUpdatedEvent.OnClientEvent:Connect(
+    function(score: number, rebirths: number, hasActiveScoringZone: boolean?, rankUpEvents)
+        local increase = ScorePopupLogic.getPositiveIncrease(previousScore, score)
+        if increase then
+            showScoreIncreasePopup(increase)
         end
-        if #rankUpQueue > 0 then
-            task.spawn(processRankUpQueue)
+
+        previousScore = score
+        setScoreAndRebirths(score, rebirths)
+        setScoringZoneActive(hasActiveScoringZone == true)
+
+        if typeof(rankUpEvents) == 'table' then
+            for _, rankUpEvent in ipairs(rankUpEvents) do
+                rankUpQueue[#rankUpQueue + 1] = rankUpEvent
+            end
+            if #rankUpQueue > 0 then
+                task.spawn(processRankUpQueue)
+            end
         end
     end
-end)
+)
 
 adminStateUpdatedEvent.OnClientEvent:Connect(function(isAdmin: boolean)
     adminPanel.Visible = isAdmin
