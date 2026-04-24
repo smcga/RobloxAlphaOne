@@ -97,25 +97,11 @@ local RANK_NAMES = {
     'Beyondborn',
 }
 
-local function buildRankConfigs(
-    rankNames: { string },
-    scoreStep: number
-): { { name: string, requiredScore: number } }
-    local configs = {}
+local ProgressionBalance = require('./ProgressionBalance')
 
-    for index, name in ipairs(rankNames) do
-        configs[index] = {
-            name = name,
-            requiredScore = (index - 1) * scoreStep,
-        }
-    end
-
-    return configs
-end
-
+local GENERATED_RANK_CONFIGS, GENERATED_AGE_BALANCE_CONFIGS = ProgressionBalance.build(RANK_NAMES)
 local Constants = {
     SCORE_INTERVAL_SECONDS = 1,
-    REBIRTH_SCORE_DIVISOR = 1000,
 
     ADMIN_SCORE_MULTIPLIERS = {
         2,
@@ -135,17 +121,20 @@ local Constants = {
     EQUIPMENT_ASSET_FAILURE_RETRY_SECONDS = 60,
     EQUIPMENT_ASSET_CACHE_SIZE = 40,
     SCORE_AUTOSAVE_INTERVAL_SECONDS = 30,
-    RANK_SCORE_STEP = 1000,
-    RANK_CONFIGS = buildRankConfigs(RANK_NAMES, 1000),
+    MAX_COMPACT_SCORE_TARGET = ProgressionBalance.MAX_COMPACT_SCORE_TARGET,
+    AGE_GAIN_RATIO = ProgressionBalance.AGE_GAIN_RATIO,
+    REBIRTH_CATCH_UP_PER_REBIRTH = ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH,
+    MAX_CATCH_UP_MULTIPLIER = ProgressionBalance.MAX_CATCH_UP_MULTIPLIER,
+    POST_RECORD_REBIRTH_MULTIPLIER = ProgressionBalance.POST_RECORD_REBIRTH_MULTIPLIER,
 
-    AGE_ZONE_SECONDS_PER_AGE = 120,
+    RANK_CONFIGS = GENERATED_RANK_CONFIGS,
 
     AGE_ZONE_CONFIGS = {
         {
             zoneName = 'AgeOfBeadsZone',
             displayName = 'Age of Beads',
-            requiredScore = 0,
-            scoreIncrement = 5,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[1].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[1].scoreIncrement,
             center = Vector3.new(-330, 1, -60),
             radius = 16,
             height = 4,
@@ -155,8 +144,8 @@ local Constants = {
         {
             zoneName = 'AgeOfBrassZone',
             displayName = 'Age of Brass',
-            requiredScore = 600,
-            scoreIncrement = 50,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[2].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[2].scoreIncrement,
             center = Vector3.new(-270, 1, 60),
             radius = 16,
             height = 4,
@@ -166,8 +155,8 @@ local Constants = {
         {
             zoneName = 'AgeOfRelaysZone',
             displayName = 'Age of Relays',
-            requiredScore = 6600,
-            scoreIncrement = 500,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[3].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[3].scoreIncrement,
             center = Vector3.new(-210, 1, -60),
             radius = 16,
             height = 4,
@@ -177,8 +166,8 @@ local Constants = {
         {
             zoneName = 'AgeOfTubesZone',
             displayName = 'Age of Tubes',
-            requiredScore = 66600,
-            scoreIncrement = 5000,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[4].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[4].scoreIncrement,
             center = Vector3.new(-150, 1, 60),
             radius = 16,
             height = 4,
@@ -188,8 +177,8 @@ local Constants = {
         {
             zoneName = 'AgeOfTransistorsZone',
             displayName = 'Age of Transistors',
-            requiredScore = 666600,
-            scoreIncrement = 50000,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[5].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[5].scoreIncrement,
             center = Vector3.new(-90, 1, -60),
             radius = 16,
             height = 4,
@@ -199,8 +188,8 @@ local Constants = {
         {
             zoneName = 'AgeOfSiliconZone',
             displayName = 'Age of Silicon',
-            requiredScore = 6666600,
-            scoreIncrement = 500000,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[6].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[6].scoreIncrement,
             center = Vector3.new(-30, 1, 60),
             radius = 16,
             height = 4,
@@ -210,8 +199,8 @@ local Constants = {
         {
             zoneName = 'AgeOfPersonalComputingZone',
             displayName = 'Age of Personal Computing',
-            requiredScore = 66666600,
-            scoreIncrement = 5000000,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[7].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[7].scoreIncrement,
             center = Vector3.new(30, 1, -60),
             radius = 16,
             height = 4,
@@ -221,8 +210,8 @@ local Constants = {
         {
             zoneName = 'AgeOfNetworksZone',
             displayName = 'Age of Networks',
-            requiredScore = 666666600,
-            scoreIncrement = 50000000,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[8].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[8].scoreIncrement,
             center = Vector3.new(90, 1, 60),
             radius = 16,
             height = 4,
@@ -232,8 +221,8 @@ local Constants = {
         {
             zoneName = 'AgeOfCloudAndMobileZone',
             displayName = 'Age of Cloud and Mobile',
-            requiredScore = 6666666600,
-            scoreIncrement = 500000000,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[9].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[9].scoreIncrement,
             center = Vector3.new(150, 1, -60),
             radius = 16,
             height = 4,
@@ -243,8 +232,8 @@ local Constants = {
         {
             zoneName = 'AgeOfMachineMindsZone',
             displayName = 'Age of Machine Minds',
-            requiredScore = 66666666600,
-            scoreIncrement = 5000000000,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[10].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[10].scoreIncrement,
             center = Vector3.new(210, 1, 60),
             radius = 16,
             height = 4,
@@ -254,8 +243,8 @@ local Constants = {
         {
             zoneName = 'AgeOfAutonomousOrderZone',
             displayName = 'Age of Autonomous Order',
-            requiredScore = 666666666600,
-            scoreIncrement = 50000000000,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[11].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[11].scoreIncrement,
             center = Vector3.new(270, 1, -60),
             radius = 16,
             height = 4,
@@ -265,8 +254,8 @@ local Constants = {
         {
             zoneName = 'AgeBeyondHumanityZone',
             displayName = 'Age Beyond Humanity',
-            requiredScore = 6666666666600,
-            scoreIncrement = 500000000000,
+            requiredScore = GENERATED_AGE_BALANCE_CONFIGS[12].requiredScore,
+            scoreIncrement = GENERATED_AGE_BALANCE_CONFIGS[12].scoreIncrement,
             center = Vector3.new(330, 1, 60),
             radius = 16,
             height = 4,

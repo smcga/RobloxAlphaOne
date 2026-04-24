@@ -1,6 +1,11 @@
+local ProgressionBalance = require('./ProgressionBalance')
+
 export type ProfileData = {
     score: number,
     rebirths: number,
+    highestScoreAchieved: number,
+    highestRankAchieved: number,
+    highestAgeAchieved: number,
     nextLuckyChestOpenAt: number,
     scoreBoostExpiresAt: number,
     unlockedHats: { string },
@@ -11,6 +16,13 @@ export type ProfileData = {
 }
 
 local ProfileDataLogic = {}
+
+local PLACEHOLDER_RANK_NAMES = table.create(ProgressionBalance.TOTAL_RANKS)
+for rankIndex = 1, ProgressionBalance.TOTAL_RANKS do
+    PLACEHOLDER_RANK_NAMES[rankIndex] = string.format('Rank %d', rankIndex)
+end
+
+local RANK_CONFIGS, AGE_CONFIGS = ProgressionBalance.build(PLACEHOLDER_RANK_NAMES)
 
 local function sanitizeWholeNumber(value: any): number
     if type(value) ~= 'number' then
@@ -65,6 +77,9 @@ function ProfileDataLogic.normalize(rawData: any): ProfileData
         return {
             score = 0,
             rebirths = 0,
+            highestScoreAchieved = 0,
+            highestRankAchieved = 1,
+            highestAgeAchieved = 1,
             nextLuckyChestOpenAt = 0,
             scoreBoostExpiresAt = 0,
             unlockedHats = {},
@@ -77,10 +92,22 @@ function ProfileDataLogic.normalize(rawData: any): ProfileData
 
     local unlockedHats = sanitizeStringArray(rawData.unlockedHats)
     local unlockedVehicleMounts = sanitizeStringArray(rawData.unlockedVehicleMounts)
+    local score = sanitizeWholeNumber(rawData.score)
+    local derivedHighestRank = ProgressionBalance.getRankIndexForScore(score, RANK_CONFIGS)
+    local derivedHighestAge = ProgressionBalance.getHighestUnlockedAgeIndex(score, AGE_CONFIGS)
 
     return {
-        score = sanitizeWholeNumber(rawData.score),
+        score = score,
         rebirths = sanitizeWholeNumber(rawData.rebirths),
+        highestScoreAchieved = math.max(sanitizeWholeNumber(rawData.highestScoreAchieved), score),
+        highestRankAchieved = math.max(
+            sanitizeWholeNumber(rawData.highestRankAchieved),
+            derivedHighestRank
+        ),
+        highestAgeAchieved = math.max(
+            sanitizeWholeNumber(rawData.highestAgeAchieved),
+            derivedHighestAge
+        ),
         nextLuckyChestOpenAt = sanitizeWholeNumber(rawData.nextLuckyChestOpenAt),
         scoreBoostExpiresAt = sanitizeWholeNumber(rawData.scoreBoostExpiresAt),
         unlockedHats = unlockedHats,
@@ -97,10 +124,25 @@ end
 function ProfileDataLogic.toStoredValue(profileData: ProfileData): { [string]: any }
     local unlockedHats = sanitizeStringArray(profileData.unlockedHats)
     local unlockedVehicleMounts = sanitizeStringArray(profileData.unlockedVehicleMounts)
+    local score = sanitizeWholeNumber(profileData.score)
+    local derivedHighestRank = ProgressionBalance.getRankIndexForScore(score, RANK_CONFIGS)
+    local derivedHighestAge = ProgressionBalance.getHighestUnlockedAgeIndex(score, AGE_CONFIGS)
 
     return {
-        score = sanitizeWholeNumber(profileData.score),
+        score = score,
         rebirths = sanitizeWholeNumber(profileData.rebirths),
+        highestScoreAchieved = math.max(
+            sanitizeWholeNumber(profileData.highestScoreAchieved),
+            score
+        ),
+        highestRankAchieved = math.max(
+            sanitizeWholeNumber(profileData.highestRankAchieved),
+            derivedHighestRank
+        ),
+        highestAgeAchieved = math.max(
+            sanitizeWholeNumber(profileData.highestAgeAchieved),
+            derivedHighestAge
+        ),
         nextLuckyChestOpenAt = sanitizeWholeNumber(profileData.nextLuckyChestOpenAt),
         scoreBoostExpiresAt = sanitizeWholeNumber(profileData.scoreBoostExpiresAt),
         unlockedHats = unlockedHats,
