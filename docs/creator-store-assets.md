@@ -15,6 +15,8 @@ This file is the source of truth for Roblox Creator Store assets currently refer
 | cozy rock | `13785580624` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsCozyRock`) |
 | Small Rocks | `1925262929` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsSmallRocks`) |
 | rake Cave | `16170402764` | `src/Shared/WorldDecorLogic.luau` (`AgeOfBeadsRakeCave`) |
+| Classic Cowboy hat | `17075928250` | `src/Shared/Constants.luau` + `src/Server/ScoreService.server.luau` forced Lucky Chest hat equip asset |
+| Drift Car mobile | `15244136642` | `src/Shared/Constants.luau` + `src/Server/ScoreService.server.luau` forced Lucky Chest vehicle mount equip asset |
 
 ## Maintenance rule
 

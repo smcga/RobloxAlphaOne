@@ -1,13 +1,16 @@
 local DataStoreService = game:GetService('DataStoreService')
+local InsertService = game:GetService('InsertService')
 local Players = game:GetService('Players')
 local RunService = game:GetService('RunService')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local ServerStorage = game:GetService('ServerStorage')
 local Debris = game:GetService('Debris')
 local SoundService = game:GetService('SoundService')
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
 local AdminLogic = require(Shared:WaitForChild('AdminLogic'))
 local Constants = require(Shared:WaitForChild('Constants'))
+local EquipmentLogic = require(Shared:WaitForChild('EquipmentLogic'))
 local LuckyChestLogic = require(Shared:WaitForChild('LuckyChestLogic'))
 local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local RankAuraLogic = require(Shared:WaitForChild('RankAuraLogic'))
@@ -32,6 +35,8 @@ type PlayerScoreState = {
     currentAuraRankIndex: number?,
     auraPulseClock: number,
     lastLockedZonePenaltyClock: number?,
+    equippedMountInstance: Model?,
+    storedWalkSpeed: number?,
 }
 
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
@@ -46,12 +51,37 @@ local adminStateUpdatedEvent = Remotes.getOrCreateAdminStateUpdatedEvent()
 local luckyChestStatusUpdatedEvent = Remotes.getOrCreateLuckyChestStatusUpdatedEvent()
 local luckyChestOpenRequestEvent = Remotes.getOrCreateLuckyChestOpenRequestEvent()
 local luckyChestOpenedEvent = Remotes.getOrCreateLuckyChestOpenedEvent()
+local equipmentStateUpdatedEvent = Remotes.getOrCreateEquipmentStateUpdatedEvent()
+local equipHatRequestEvent = Remotes.getOrCreateEquipHatRequestEvent()
+local unequipHatRequestEvent = Remotes.getOrCreateUnequipHatRequestEvent()
+local equipVehicleMountRequestEvent = Remotes.getOrCreateEquipVehicleMountRequestEvent()
+local unequipVehicleMountRequestEvent = Remotes.getOrCreateUnequipVehicleMountRequestEvent()
+local equipmentActionResultEvent = Remotes.getOrCreateEquipmentActionResultEvent()
 
 local playerStates: { [Player]: PlayerScoreState } = {}
 local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
 local customRewardCatalogStore =
     DataStoreService:GetDataStore(Constants.CUSTOM_REWARD_CATALOG_DATASTORE_NAME)
 local customRewards: { AdminReward } = {}
+local playerMountsFolder = workspace:FindFirstChild('PlayerMounts')
+if not playerMountsFolder then
+    playerMountsFolder = Instance.new('Folder')
+    playerMountsFolder.Name = 'PlayerMounts'
+    playerMountsFolder.Parent = workspace
+end
+local equipmentAssetCacheFolder = ServerStorage:FindFirstChild('LuckyChestAssetCache')
+if not equipmentAssetCacheFolder then
+    equipmentAssetCacheFolder = Instance.new('Folder')
+    equipmentAssetCacheFolder.Name = 'LuckyChestAssetCache'
+    equipmentAssetCacheFolder.Parent = ServerStorage
+end
+local assetTemplateCache: { [number]: Instance } = {}
+local assetCacheOrder: { number } = {}
+local assetFailureById: { [number]: number } = {}
+local forcedAssetOverrides: EquipmentLogic.ForcedAssetOverrides = {
+    hatAssetId = Constants.FORCED_HAT_ASSET_ID,
+    vehicleMountAssetId = Constants.FORCED_MOUNT_ASSET_ID,
+}
 
 local function getCustomLuckyChestRewards()
     local luckyChestRewards = {}
@@ -59,6 +89,126 @@ local function getCustomLuckyChestRewards()
         luckyChestRewards[index] = RewardCatalogLogic.toLuckyChestRewardItem(reward)
     end
     return luckyChestRewards
+end
+
+local function getRewardLookup()
+    local categoryConfigs =
+        LuckyChestLogic.getEffectiveCategoryConfigs(getCustomLuckyChestRewards())
+    return EquipmentLogic.buildRewardLookup(categoryConfigs)
+end
+
+local function cloneArray(values: { string }): { string }
+    local cloned = {}
+    for index, value in ipairs(values) do
+        cloned[index] = value
+    end
+    return cloned
+end
+
+local function pushEquipmentState(player: Player, state: PlayerScoreState)
+    local payload = EquipmentLogic.buildEquipmentStatePayload(state.profileData, getRewardLookup())
+    if payload.equippedHatId ~= state.profileData.equippedHatId then
+        state.profileData.equippedHatId = payload.equippedHatId
+    end
+    if payload.equippedVehicleMountId ~= state.profileData.equippedVehicleMountId then
+        state.profileData.equippedVehicleMountId = payload.equippedVehicleMountId
+    end
+
+    equipmentStateUpdatedEvent:FireClient(player, {
+        unlockedHats = cloneArray(payload.unlockedHats),
+        unlockedVehicleMounts = cloneArray(payload.unlockedVehicleMounts),
+        equippedHatId = payload.equippedHatId,
+        equippedVehicleMountId = payload.equippedVehicleMountId,
+        availableHats = payload.availableHats,
+        availableVehicleMounts = payload.availableVehicleMounts,
+    })
+end
+
+local function sendEquipmentResult(player: Player, success: boolean, message: string)
+    equipmentActionResultEvent:FireClient(player, success, message)
+end
+
+local function stripScripts(root: Instance)
+    for _, descendant in ipairs(root:GetDescendants()) do
+        if
+            descendant:IsA('Script')
+            or descendant:IsA('LocalScript')
+            or descendant:IsA('ModuleScript')
+        then
+            descendant:Destroy()
+        end
+    end
+end
+
+local function getFirstBasePart(root: Instance): BasePart?
+    if root:IsA('BasePart') then
+        return root
+    end
+
+    for _, descendant in ipairs(root:GetDescendants()) do
+        if descendant:IsA('BasePart') then
+            return descendant
+        end
+    end
+
+    return nil
+end
+
+local function rememberAssetTemplate(assetId: number, template: Instance)
+    assetTemplateCache[assetId] = template
+    table.insert(assetCacheOrder, assetId)
+    if #assetCacheOrder > Constants.EQUIPMENT_ASSET_CACHE_SIZE then
+        local oldestAssetId = table.remove(assetCacheOrder, 1)
+        if oldestAssetId and oldestAssetId ~= assetId then
+            local oldTemplate = assetTemplateCache[oldestAssetId]
+            if oldTemplate then
+                oldTemplate:Destroy()
+                assetTemplateCache[oldestAssetId] = nil
+            end
+        end
+    end
+end
+
+local function getSanitizedAssetTemplate(assetId: number): (boolean, string, Instance?)
+    local cached = assetTemplateCache[assetId]
+    if cached then
+        return true, 'ok', cached
+    end
+
+    local now = os.time()
+    local failedAt = assetFailureById[assetId]
+    if failedAt and now - failedAt < Constants.EQUIPMENT_ASSET_FAILURE_RETRY_SECONDS then
+        return false, 'Asset is temporarily unavailable. Try again soon.', nil
+    end
+
+    local success, loaded = pcall(function()
+        return InsertService:LoadAsset(assetId)
+    end)
+
+    if not success or not loaded then
+        assetFailureById[assetId] = now
+        return false, 'Failed to load asset. Try another reward.', nil
+    end
+
+    stripScripts(loaded)
+    if #loaded:GetDescendants() > 500 then
+        loaded:Destroy()
+        assetFailureById[assetId] = now
+        return false, 'Reward asset is too large to equip safely.', nil
+    end
+
+    local hasPart = getFirstBasePart(loaded) ~= nil
+    if not hasPart then
+        loaded:Destroy()
+        assetFailureById[assetId] = now
+        return false, 'Reward asset has no usable parts.', nil
+    end
+
+    loaded.Name = string.format('Asset_%s', tostring(assetId))
+    loaded.Parent = equipmentAssetCacheFolder
+    rememberAssetTemplate(assetId, loaded)
+    assetFailureById[assetId] = nil
+    return true, 'ok', loaded
 end
 
 local function pushCustomRewardCatalogToPlayer(player: Player)
@@ -206,6 +356,235 @@ local function getHumanoidRootPart(player: Player): BasePart?
     end
 
     return nil
+end
+
+local function getHumanoid(player: Player): Humanoid?
+    local character = player.Character
+    if not character then
+        return nil
+    end
+
+    local humanoid = character:FindFirstChildOfClass('Humanoid')
+    if humanoid then
+        return humanoid
+    end
+
+    return nil
+end
+
+local function removeEquippedHatVisual(player: Player)
+    local character = player.Character
+    if not character then
+        return
+    end
+
+    for _, child in ipairs(character:GetChildren()) do
+        if string.match(child.Name, '^LuckyChestEquippedHat') then
+            child:Destroy()
+        end
+    end
+end
+
+local function removeEquippedMountVisual(state: PlayerScoreState)
+    local existing = state.equippedMountInstance
+    if existing then
+        existing:Destroy()
+        state.equippedMountInstance = nil
+    end
+end
+
+local function restoreWalkSpeed(player: Player, state: PlayerScoreState)
+    local humanoid = getHumanoid(player)
+    if humanoid and state.storedWalkSpeed then
+        humanoid.WalkSpeed = state.storedWalkSpeed
+    end
+    state.storedWalkSpeed = nil
+end
+
+local function configurePartForMount(part: BasePart)
+    part.Anchored = false
+    part.CanCollide = false
+    part.CanTouch = false
+    part.CanQuery = false
+    part.Massless = true
+end
+
+local function createMountModel(assetTemplate: Instance): (boolean, string, Model?)
+    local sourceModel = assetTemplate:FindFirstChildWhichIsA('Model')
+    local sourcePart = sourceModel and nil or getFirstBasePart(assetTemplate)
+
+    local model: Model
+    if sourceModel then
+        model = sourceModel:Clone()
+    elseif sourcePart then
+        model = Instance.new('Model')
+        sourcePart:Clone().Parent = model
+    else
+        return false, 'Failed to load asset. Try another reward.', nil
+    end
+
+    local primaryPart = model.PrimaryPart or getFirstBasePart(model)
+    if not primaryPart then
+        model:Destroy()
+        return false, 'Reward asset has no usable parts.', nil
+    end
+    model.PrimaryPart = primaryPart
+
+    for _, descendant in ipairs(model:GetDescendants()) do
+        if descendant:IsA('BasePart') then
+            configurePartForMount(descendant)
+        end
+    end
+
+    return true, 'ok', model
+end
+
+local function equipHatVisual(
+    player: Player,
+    reward: EquipmentLogic.RewardDescriptor
+): (boolean, string)
+    local assetId = EquipmentLogic.resolveAssetIdForEquip(reward, forcedAssetOverrides)
+    if not assetId then
+        return false, 'That reward has no asset configured yet.'
+    end
+
+    local character = player.Character
+    local humanoid = getHumanoid(player)
+    if not character or not humanoid then
+        return false, 'Character is not ready yet.'
+    end
+
+    local head = character:FindFirstChild('Head')
+    if not head or not head:IsA('BasePart') then
+        return false, 'Character is missing a head part.'
+    end
+
+    local ok, message, template = getSanitizedAssetTemplate(assetId)
+    if not ok or not template then
+        return false, message
+    end
+
+    removeEquippedHatVisual(player)
+
+    local accessory = template:FindFirstChildWhichIsA('Accessory', true)
+    if accessory then
+        local accessoryClone = accessory:Clone()
+        accessoryClone.Name = 'LuckyChestEquippedHatAccessory'
+        local handle = accessoryClone:FindFirstChild('Handle')
+        if handle and handle:IsA('BasePart') then
+            humanoid:AddAccessory(accessoryClone)
+            return true, string.format('Equipped %s.', reward.displayName)
+        end
+        accessoryClone:Destroy()
+    end
+
+    local sourceModel = template:FindFirstChildWhichIsA('Model')
+    local sourcePart = sourceModel and nil or getFirstBasePart(template)
+    local visual: Instance? = nil
+    if sourceModel then
+        visual = sourceModel:Clone()
+    elseif sourcePart then
+        visual = sourcePart:Clone()
+    end
+    if not visual then
+        return false, 'Failed to load asset. Try another reward.'
+    end
+
+    local rootPart = getFirstBasePart(visual)
+    if not rootPart then
+        visual:Destroy()
+        return false, 'Reward asset has no usable parts.'
+    end
+
+    if visual:IsA('Model') then
+        for _, descendant in ipairs(visual:GetDescendants()) do
+            if descendant:IsA('BasePart') then
+                descendant.Anchored = false
+                descendant.CanCollide = false
+                descendant.CanTouch = false
+                descendant.CanQuery = false
+                descendant.Massless = true
+            end
+        end
+        local model = visual :: Model
+        model.Name = 'LuckyChestEquippedHatModel'
+        if not model.PrimaryPart then
+            model.PrimaryPart = rootPart
+        end
+        model:PivotTo(head.CFrame * CFrame.new(0, 0.65, 0))
+        model.Parent = character
+    else
+        local part = visual :: BasePart
+        part.Name = 'LuckyChestEquippedHatPart'
+        part.Anchored = false
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = false
+        part.Massless = true
+        part.CFrame = head.CFrame * CFrame.new(0, 0.65, 0)
+        part.Parent = character
+    end
+
+    local weld = Instance.new('WeldConstraint')
+    weld.Part0 = head
+    weld.Part1 = rootPart
+    weld.Parent = rootPart
+    -- TODO: tune per-asset offsets for hats that need custom placement.
+
+    return true, string.format('Equipped %s.', reward.displayName)
+end
+
+local function equipMountVisual(
+    player: Player,
+    state: PlayerScoreState,
+    reward: EquipmentLogic.RewardDescriptor
+): (boolean, string)
+    local assetId = EquipmentLogic.resolveAssetIdForEquip(reward, forcedAssetOverrides)
+    if not assetId then
+        return false, 'That reward has no asset configured yet.'
+    end
+
+    local character = player.Character
+    local rootPart = getHumanoidRootPart(player)
+    local humanoid = getHumanoid(player)
+    if not character or not rootPart or not humanoid then
+        return false, 'Character is not ready yet.'
+    end
+
+    local ok, message, template = getSanitizedAssetTemplate(assetId)
+    if not ok or not template then
+        return false, message
+    end
+
+    local modelOk, modelMessage, model = createMountModel(template)
+    if not modelOk or not model then
+        return false, modelMessage
+    end
+
+    removeEquippedMountVisual(state)
+    restoreWalkSpeed(player, state)
+
+    model.Name = 'LuckyChestEquippedMount'
+    model.Parent = playerMountsFolder
+    model:PivotTo(rootPart.CFrame * CFrame.new(0, -2.4, 0.5))
+
+    local primaryPart = model.PrimaryPart
+    if not primaryPart then
+        model:Destroy()
+        return false, 'Reward asset has no usable parts.'
+    end
+
+    local weld = Instance.new('WeldConstraint')
+    weld.Part0 = rootPart
+    weld.Part1 = primaryPart
+    weld.Parent = primaryPart
+
+    state.equippedMountInstance = model
+    state.storedWalkSpeed = humanoid.WalkSpeed
+    humanoid.WalkSpeed = math.floor(state.storedWalkSpeed * Constants.MOUNT_WALK_SPEED_MULTIPLIER)
+
+    -- TODO: tune mount offsets per-asset for best riding visuals.
+    return true, 'Vehicle mount equipped.'
 end
 
 local function pushScore(player: Player, score: number, rebirths: number)
@@ -568,6 +947,8 @@ local function createPlayerState(profileData: ProfileData): PlayerScoreState
         currentAuraRankIndex = nil,
         auraPulseClock = 0,
         lastLockedZonePenaltyClock = nil,
+        equippedMountInstance = nil,
+        storedWalkSpeed = nil,
     }
 end
 
@@ -641,12 +1022,49 @@ local function markDirty(state: PlayerScoreState)
     state.dirtyVersion += 1
 end
 
+local function reapplyPersistedEquipment(player: Player, state: PlayerScoreState)
+    if state.profileData.equippedHatId then
+        local rewardLookup = getRewardLookup()
+        local reward = rewardLookup[state.profileData.equippedHatId]
+        if reward and reward.kind == 'hat' then
+            local ok = equipHatVisual(player, reward)
+            if not ok then
+                removeEquippedHatVisual(player)
+            end
+        else
+            state.profileData.equippedHatId = nil
+            markDirty(state)
+        end
+    else
+        removeEquippedHatVisual(player)
+    end
+
+    if state.profileData.equippedVehicleMountId then
+        local rewardLookup = getRewardLookup()
+        local reward = rewardLookup[state.profileData.equippedVehicleMountId]
+        if reward and reward.kind == 'vehicleMount' then
+            local ok = equipMountVisual(player, state, reward)
+            if not ok then
+                removeEquippedMountVisual(state)
+                restoreWalkSpeed(player, state)
+            end
+        else
+            state.profileData.equippedVehicleMountId = nil
+            markDirty(state)
+        end
+    else
+        removeEquippedMountVisual(state)
+        restoreWalkSpeed(player, state)
+    end
+end
+
 local function initializePlayerState(player: Player)
     local state = loadPlayerState(player)
     playerStates[player] = state
 
     pushScore(player, state.progressionState.score, state.progressionState.rebirths)
     pushLuckyChestStatus(player, state.profileData)
+    pushEquipmentState(player, state)
     updateRankTitle(player, state.progressionState.score)
     pushIsAdmin(player, isPlayerAdmin(player))
     pushCustomRewardCatalogToPlayer(player)
@@ -660,11 +1078,17 @@ local function initializePlayerState(player: Player)
                 currentState.progressionState.rebirths
             )
             pushLuckyChestStatus(player, currentState.profileData)
+            pushEquipmentState(player, currentState)
             updateRankTitle(player, currentState.progressionState.score)
             currentState.currentAuraRankIndex = nil
             updateRankAura(player, currentState)
+            reapplyPersistedEquipment(player, currentState)
         end
     end)
+
+    if player.Character then
+        reapplyPersistedEquipment(player, state)
+    end
 end
 
 adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, multiplier: number)
@@ -767,6 +1191,12 @@ adminAddRewardRequestEvent.OnServerEvent:Connect(function(player: Player, payloa
     customRewards = nextRewards
     adminAddRewardResultEvent:FireClient(player, true, 'Reward saved successfully.', reward)
     broadcastCustomRewardCatalog()
+    for _, onlinePlayer in ipairs(Players:GetPlayers()) do
+        local onlineState = playerStates[onlinePlayer]
+        if onlineState then
+            pushEquipmentState(onlinePlayer, onlineState)
+        end
+    end
 end)
 
 luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
@@ -802,6 +1232,7 @@ luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
     pushScore(player, state.progressionState.score, state.progressionState.rebirths)
     updateRankTitle(player, state.progressionState.score)
     pushLuckyChestStatus(player, state.profileData)
+    pushEquipmentState(player, state)
 
     luckyChestOpenedEvent:FireClient(
         player,
@@ -812,6 +1243,95 @@ luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
 
     markDirty(state)
     savePlayerState(player, false)
+end)
+
+equipHatRequestEvent.OnServerEvent:Connect(function(player: Player, rewardId: any)
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    local ok, message, reward = EquipmentLogic.resolveEquipReward(
+        rewardId,
+        'hat',
+        state.profileData.unlockedHats,
+        getRewardLookup()
+    )
+    if not ok or not reward then
+        sendEquipmentResult(player, false, message)
+        return
+    end
+
+    local equipOk, equipMessage = equipHatVisual(player, reward)
+    if not equipOk then
+        sendEquipmentResult(player, false, equipMessage)
+        return
+    end
+
+    state.profileData.equippedHatId = reward.id
+    markDirty(state)
+    pushEquipmentState(player, state)
+    savePlayerState(player, false)
+    sendEquipmentResult(player, true, equipMessage)
+end)
+
+unequipHatRequestEvent.OnServerEvent:Connect(function(player: Player)
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    removeEquippedHatVisual(player)
+    state.profileData.equippedHatId = nil
+    markDirty(state)
+    pushEquipmentState(player, state)
+    savePlayerState(player, false)
+    sendEquipmentResult(player, true, 'Unequipped hat.')
+end)
+
+equipVehicleMountRequestEvent.OnServerEvent:Connect(function(player: Player, rewardId: any)
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    local ok, message, reward = EquipmentLogic.resolveEquipReward(
+        rewardId,
+        'vehicleMount',
+        state.profileData.unlockedVehicleMounts,
+        getRewardLookup()
+    )
+    if not ok or not reward then
+        sendEquipmentResult(player, false, message)
+        return
+    end
+
+    local equipOk, equipMessage = equipMountVisual(player, state, reward)
+    if not equipOk then
+        sendEquipmentResult(player, false, equipMessage)
+        return
+    end
+
+    state.profileData.equippedVehicleMountId = reward.id
+    markDirty(state)
+    pushEquipmentState(player, state)
+    savePlayerState(player, false)
+    sendEquipmentResult(player, true, equipMessage)
+end)
+
+unequipVehicleMountRequestEvent.OnServerEvent:Connect(function(player: Player)
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    removeEquippedMountVisual(state)
+    restoreWalkSpeed(player, state)
+    state.profileData.equippedVehicleMountId = nil
+    markDirty(state)
+    pushEquipmentState(player, state)
+    savePlayerState(player, false)
+    sendEquipmentResult(player, true, 'Unequipped vehicle mount.')
 end)
 
 loadCustomRewardCatalog()
@@ -825,6 +1345,10 @@ for _, player in Players:GetPlayers() do
 end
 
 Players.PlayerRemoving:Connect(function(player)
+    local state = playerStates[player]
+    if state then
+        removeEquippedMountVisual(state)
+    end
     savePlayerState(player, true)
     playerStates[player] = nil
 end)

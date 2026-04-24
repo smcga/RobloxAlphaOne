@@ -33,6 +33,7 @@ runCase('normalize returns zeroed state when persisted data is missing', functio
     expectEqual(result.nextLuckyChestOpenAt, 0, 'missing data should default chest cooldown')
     expectEqual(result.scoreBoostExpiresAt, 0, 'missing data should default boost expiration')
     expectEqual(#result.unlockedHats, 0, 'missing data should default hats to empty')
+    expectEqual(result.equippedHatId, nil, 'missing data should default equipped hat to nil')
 end)
 
 runCase('normalize backfills highest fields for old saved data', function()
@@ -98,6 +99,9 @@ runCase('normalize floors decimal values from persisted data', function()
         nextLuckyChestOpenAt = 111.8,
         scoreBoostExpiresAt = 74.6,
         unlockedHats = { 'hat_one', 'hat_one', 42, 'hat_two' },
+        unlockedVehicleMounts = { 'mount_one' },
+        equippedHatId = 'hat_two',
+        equippedVehicleMountId = 'mount_one',
     })
 
     expectEqual(result.score, 15, 'score should be stored as a whole number')
@@ -107,6 +111,12 @@ runCase('normalize floors decimal values from persisted data', function()
     expectEqual(result.scoreBoostExpiresAt, 74, 'timestamps should be whole numbers')
     expectEqual(#result.unlockedHats, 2, 'duplicate/invalid inventory entries should be stripped')
     expectStringEqual(result.unlockedHats[2], 'hat_two', 'keeps valid entries in order')
+    expectStringEqual(result.equippedHatId or '', 'hat_two', 'equipped hat should be preserved')
+    expectStringEqual(
+        result.equippedVehicleMountId or '',
+        'mount_one',
+        'equipped mount should be preserved'
+    )
 end)
 
 runCase('toStoredValue serializes sanitized highest achieved values', function()
@@ -120,7 +130,9 @@ runCase('toStoredValue serializes sanitized highest achieved values', function()
         scoreBoostExpiresAt = 23,
         unlockedHats = { 'hat_alpha', 'hat_alpha', 'hat_beta' },
         unlockedPets = { 'pet_one' },
-        unlockedVehicleMounts = {},
+        unlockedVehicleMounts = { 'mount_alpha' },
+        equippedHatId = 'hat_beta',
+        equippedVehicleMountId = 'mount_alpha',
     })
 
     expectEqual(result.score, 42, 'stored score should be sanitized')
@@ -145,4 +157,10 @@ runCase('toStoredValue serializes sanitized highest achieved values', function()
     expectEqual(result.nextLuckyChestOpenAt, 17, 'stored chest timestamp should be sanitized')
     expectEqual(result.scoreBoostExpiresAt, 23, 'stored boost timestamp should be sanitized')
     expectEqual(#result.unlockedHats, 2, 'stored hats should be deduplicated')
+    expectStringEqual(result.equippedHatId or '', 'hat_beta', 'stored equipped hat should persist')
+    expectStringEqual(
+        result.equippedVehicleMountId or '',
+        'mount_alpha',
+        'stored equipped mount should persist'
+    )
 end)
