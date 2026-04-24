@@ -18,10 +18,9 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
 - Shows an owner-only admin panel with buttons to multiply current score (`2x`, `10x`), skip the Lucky Chest cooldown timer, and a guarded reset button that requires a second confirmation click before wiping your own score/rebirths.
 - Extends the owner-only admin panel with an **Add Reward** modal to add Lucky Chest hat/vehicle rewards from Roblox Creator Store asset links or raw asset IDs, persisted in a global server-side reward catalog.
-- Increments score while inside age zones, with each age granting a higher score-per-second multiplier.
-- Applies a rebirth multiplier to score gain (`max(Rebirths, 1)`), so `2` rebirths means `2x` score/sec.
-- Unlock requirements and score gains scale so each age takes roughly the same active time to complete while totals grow exponentially.
-- Entering the glowing `Rebirth` zone converts score into rebirths (`+1` per `1000` score) and resets score to `0`.
+- Increments score while inside age zones, with generated non-linear rank/age requirements and per-age score-per-second values derived from a shared progression curve.
+- A fresh no-rebirth run targets rank transition times of `30s, 40s, 50s, ...` while players stay in their highest unlocked age zone.
+- Entering the glowing `Rebirth` zone now grants exactly `+1` rebirth, resets current score to `0`, preserves highest achieved milestones, and applies a temporary catch-up multiplier until players return to their prior best score.
 - Entering a locked age zone before meeting its score requirement now flings the player away, kills them, plays a global death SFX, and bursts a cloud of `Nope!` text particles.
 - Stops score gain immediately when leaving each zone.
 - Adds a server-authoritative Lucky Chest system: once every 5 minutes players can open a chest that spins category then reward item with green/blue/purple/orange/gold rarity odds and can grant score, rebirths, hats, pets, vehicle mounts, or a 1-minute 10x score boost.
@@ -141,9 +140,9 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - The rank title above each player's head updates automatically as score crosses rank thresholds.
    - Your avatar aura transforms every rank with unique colors, stronger particles/light pulses, and increased size at higher ranks.
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
-   - Score gain scales with rebirths (example: `2` rebirths doubles whichever age-zone gain is active).
+   - Rebirth grants temporary catch-up acceleration below your previous best score, then progression returns to the baseline timing curve after you catch up.
    - Age zones unlock in sequence as your score passes each requirement threshold.
-   - Entering the `Rebirth` zone resets score to `0` and grants `floor(score / 1000)` rebirths.
+   - Entering the `Rebirth` zone resets score to `0`, grants exactly `+1` rebirth, and preserves highest achieved score/rank/age milestones for catch-up pacing.
    - Entering a still-locked age zone flings you away, then kills you, while preserving your existing score/rebirth totals.
    - Locked-zone deaths play a shared SFX for everyone and spawn flying `Nope!` text particles around the punished player.
    - If you're the game owner, admin panel buttons can multiply your current score by `2x` or `10x`, skip your Lucky Chest cooldown timer, and can reset your own score/rebirths after a two-click confirmation prompt.
