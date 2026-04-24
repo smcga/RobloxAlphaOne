@@ -1616,6 +1616,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
         state.auraPulseClock += deltaSeconds
         local rootPart = getHumanoidRootPart(player)
         local runtimeZoneSnapshotsByZoneName = {}
+        local runtimeZonePartsByZoneName: { [string]: BasePart } = {}
         local runtimeAgeZoneConfigs = table.create(#Constants.AGE_ZONE_CONFIGS)
         for _, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
             local zonePart = workspace:FindFirstChild(zoneConfig.zoneName)
@@ -1624,6 +1625,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
                     position = zonePart.Position,
                     size = zonePart.Size,
                 }
+                runtimeZonePartsByZoneName[zoneConfig.zoneName] = zonePart
             end
         end
         runtimeAgeZoneConfigs = AgeZoneRuntimeLogic.buildRuntimeConfigs(
@@ -1636,11 +1638,20 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
 
         if rootPart then
             for index, zoneConfig in ipairs(runtimeAgeZoneConfigs) do
-                isInsideAgeZones[index] = ZoneLogic.isPositionInsideCircle(
-                    rootPart.Position,
-                    zoneConfig.center,
-                    zoneConfig.radius
-                )
+                local zonePart = runtimeZonePartsByZoneName[zoneConfig.zoneName]
+                if zonePart then
+                    isInsideAgeZones[index] = ZoneLogic.isPositionInsideOrientedCircle(
+                        rootPart.Position,
+                        zonePart.CFrame,
+                        zonePart.Size
+                    )
+                else
+                    isInsideAgeZones[index] = ZoneLogic.isPositionInsideCircle(
+                        rootPart.Position,
+                        zoneConfig.center,
+                        zoneConfig.radius
+                    )
+                end
             end
             isInsideRebirthZone = ZoneLogic.isPositionInsideCircle(
                 rootPart.Position,

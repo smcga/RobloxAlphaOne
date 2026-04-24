@@ -48,3 +48,29 @@ runCase('position exactly on radius boundary returns true', function()
     )
     expectEqual(isInside, true, 'boundary position should count as inside circle')
 end)
+
+runCase('oriented circle check stays valid for rotated zone parts', function()
+    local zoneCFrame = {
+        PointToObjectSpace = function(_, _)
+            return { X = 0, Y = 8, Z = 9 }
+        end,
+    }
+    local zoneSize = { X = 4, Y = 32, Z = 32 }
+    local isInside =
+        ZoneLogic.isPositionInsideOrientedCircle({ X = 12, Y = 20, Z = -10 }, zoneCFrame, zoneSize)
+
+    expectEqual(isInside, true, 'rotated cylinder zone should still detect inside positions')
+end)
+
+runCase('oriented circle check rejects points outside radial range', function()
+    local zoneCFrame = {
+        PointToObjectSpace = function(_, _)
+            return { X = 0, Y = 40, Z = 0 }
+        end,
+    }
+    local zoneSize = { X = 4, Y = 32, Z = 32 }
+    local isInside =
+        ZoneLogic.isPositionInsideOrientedCircle({ X = 100, Y = 1, Z = 0 }, zoneCFrame, zoneSize)
+
+    expectEqual(isInside, false, 'far radial points should remain outside zone')
+end)
