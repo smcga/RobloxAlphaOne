@@ -225,3 +225,27 @@ runCase('rank multiplier contributes to score gain', function()
 
     expectEqual(result.state.score, 1.2, 'rank multiplier should scale zone score increment')
 end)
+
+runCase('legacy corrupted state values recover and continue scoring', function()
+    local corruptedState = ZoneProgressionLogic.newState(0, 0, 0, 1, 1)
+    corruptedState.score = 0 / 0
+    corruptedState.rebirths = 0 / 0
+    corruptedState.highestScoreAchieved = math.huge
+    corruptedState.highestRankAchieved = 0
+    corruptedState.highestAgeAchieved = 0
+    corruptedState.ageAccumulatorSeconds[1] = 0 / 0
+
+    local result = tick(corruptedState, {
+        isInsideAgeZones = {
+            true,
+            false,
+            false,
+        },
+    })
+
+    expectEqual(result.state.score, 1, 'sanitized state should continue baseline score progression')
+    expectEqual(result.state.rebirths, 0, 'sanitized rebirths should fall back to zero')
+    expectEqual(result.state.highestScoreAchieved, 1, 'highest score should recover from invalid values')
+    expectEqual(result.state.highestRankAchieved, 1, 'highest rank should clamp to minimum rank')
+    expectEqual(result.state.highestAgeAchieved, 1, 'highest age should clamp to minimum age')
+end)

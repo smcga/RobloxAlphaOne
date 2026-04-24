@@ -40,6 +40,27 @@ export type ZoneProgressionResult = {
 
 local ZoneProgressionLogic = {}
 
+local function sanitizeFiniteNumber(value: number?, fallback: number?): number?
+    if type(value) ~= 'number' then
+        return fallback
+    end
+
+    if value ~= value then
+        return fallback
+    end
+
+    if value == math.huge or value == -math.huge then
+        return fallback
+    end
+
+    return value
+end
+
+local function sanitizeWholeNumber(value: number?, fallback: number): number
+    local normalized = sanitizeFiniteNumber(value, fallback) or fallback
+    return math.max(math.floor(normalized), 0)
+end
+
 function ZoneProgressionLogic.newState(
     initialScore: number?,
     initialRebirths: number?,
@@ -47,15 +68,18 @@ function ZoneProgressionLogic.newState(
     initialHighestRankAchieved: number?,
     initialHighestAgeAchieved: number?
 ): ZoneProgressionState
-    local score = initialScore or 0
-    local highestScoreAchieved = math.max(initialHighestScoreAchieved or score, score)
+    local score = sanitizeFiniteNumber(initialScore, 0) or 0
+    local highestScoreAchieved = math.max(
+        sanitizeFiniteNumber(initialHighestScoreAchieved, score) or score,
+        score
+    )
 
     return {
         score = score,
-        rebirths = initialRebirths or 0,
+        rebirths = sanitizeWholeNumber(initialRebirths, 0),
         highestScoreAchieved = highestScoreAchieved,
-        highestRankAchieved = initialHighestRankAchieved or 1,
-        highestAgeAchieved = initialHighestAgeAchieved or 1,
+        highestRankAchieved = math.max(sanitizeWholeNumber(initialHighestRankAchieved, 1), 1),
+        highestAgeAchieved = math.max(sanitizeWholeNumber(initialHighestAgeAchieved, 1), 1),
         ageAccumulatorSeconds = {},
         wasInsideRebirthZone = false,
     }
@@ -65,30 +89,37 @@ function ZoneProgressionLogic.tick(
     state: ZoneProgressionState,
     input: ZoneProgressionInput
 ): ZoneProgressionResult
-    local catchUpPerRebirth = input.rebirthCatchUpPerRebirth
+    local catchUpPerRebirth = sanitizeFiniteNumber(input.rebirthCatchUpPerRebirth, nil)
         or ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH
-    local maxCatchUpMultiplier = input.maxCatchUpMultiplier
+    local maxCatchUpMultiplier = sanitizeFiniteNumber(input.maxCatchUpMultiplier, nil)
         or ProgressionBalance.MAX_CATCH_UP_MULTIPLIER
-    local postRecordRebirthMultiplier = input.postRecordRebirthMultiplier
+    local postRecordRebirthMultiplier = sanitizeFiniteNumber(input.postRecordRebirthMultiplier, nil)
         or ProgressionBalance.POST_RECORD_REBIRTH_MULTIPLIER
 
+    local stateScore = sanitizeFiniteNumber(state.score, 0) or 0
+    local highestScoreAchievedState = math.max(
+        sanitizeFiniteNumber(state.highestScoreAchieved, stateScore) or stateScore,
+        stateScore
+    )
+    local stateRebirths = sanitizeWholeNumber(state.rebirths, 0)
+
     local catchUpMultiplier = 1
-    if state.score < state.highestScoreAchieved then
-        catchUpMultiplier = math.min(maxCatchUpMultiplier, 1 + state.rebirths * catchUpPerRebirth)
+    if stateScore < highestScoreAchievedState then
+        catchUpMultiplier = math.min(maxCatchUpMultiplier, 1 + stateRebirths * catchUpPerRebirth)
     end
 
     local scoreMultiplier = catchUpMultiplier
-        * (input.bonusScoreMultiplier or 1)
-        * (input.rankScoreMultiplier or 1)
+        * (sanitizeFiniteNumber(input.bonusScoreMultiplier, 1) or 1)
+        * (sanitizeFiniteNumber(input.rankScoreMultiplier, 1) or 1)
         * postRecordRebirthMultiplier
 
-    local score = state.score
+    local score = stateScore
     local ageAccumulatorSeconds = {}
     local zoneCount = #input.ageZoneConfigs
 
     for index = 1, zoneCount do
         local zoneConfig = input.ageZoneConfigs[index]
-        local zoneAccumulator = state.ageAccumulatorSeconds[index] or 0
+        local zoneAccumulator = sanitizeFiniteNumber(state.ageAccumulatorSeconds[index], 0) or 0
         local isInsideZone = input.isInsideAgeZones[index] == true
         local canUseZone = score >= zoneConfig.requiredScore
 
@@ -97,17 +128,17 @@ function ZoneProgressionLogic.tick(
                 score = score,
                 accumulatorSeconds = zoneAccumulator,
             },
-            input.deltaSeconds,
+            math.max(sanitizeFiniteNumber(input.deltaSeconds, 0) or 0, 0),
             isInsideZone and canUseZone,
-            input.scoreIntervalSeconds,
-            zoneConfig.scoreIncrement * scoreMultiplier
+            math.max(sanitizeFiniteNumber(input.scoreIntervalSeconds, 1) or 1, 1e-6),
+            (sanitizeFiniteNumber(zoneConfig.scoreIncrement, 0) or 0) * scoreMultiplier
         )
         score = zoneTickState.score
         ageAccumulatorSeconds[index] = zoneTickState.accumulatorSeconds
     end
 
     local enteredRebirthZone = input.isInsideRebirthZone and not state.wasInsideRebirthZone
-    local rebirths = state.rebirths
+    local rebirths = stateRebirths
 
     if enteredRebirthZone then
         local rebirthConfig = input.rebirthConfig
@@ -131,13 +162,13 @@ function ZoneProgressionLogic.tick(
         end
     end
 
-    local highestScoreAchieved = math.max(state.highestScoreAchieved, score)
+    local highestScoreAchieved = math.max(highestScoreAchievedState, score)
     local highestRankAchieved = math.max(
-        state.highestRankAchieved,
+        math.max(sanitizeWholeNumber(state.highestRankAchieved, 1), 1),
         ProgressionBalance.getRankIndexForScore(score, input.rankConfigs)
     )
     local highestAgeAchieved = math.max(
-        state.highestAgeAchieved,
+        math.max(sanitizeWholeNumber(state.highestAgeAchieved, 1), 1),
         ProgressionBalance.getHighestUnlockedAgeIndex(score, input.ageZoneConfigs)
     )
 
