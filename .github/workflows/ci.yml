@@ -2,17 +2,37 @@ name: CI
 
 on:
   push:
+    branches:
+      - '**'
   pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup mise
         uses: jdx/mise-action@v2
+
+      - name: Cache Wally dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            .wally
+            Packages
+          key: ${{ runner.os }}-wally-${{ hashFiles('wally.toml', 'wally.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-wally-
 
       - name: Bootstrap environment
         run: ./scripts/setup_env.sh
@@ -28,3 +48,11 @@ jobs:
 
       - name: Validate Rojo build
         run: mise exec -- rojo build default.project.json --output build.rbxlx
+
+      - name: Upload place artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-build-rbxlx
+          path: build.rbxlx
+          if-no-files-found: error
+          retention-days: 7

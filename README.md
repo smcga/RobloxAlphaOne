@@ -215,20 +215,28 @@ mise exec -- rojo serve default.project.json
 - **Validation:** Luau type annotations are used in source modules. Selene provides practical static linting; this repo intentionally allows `incorrect_standard_library_use` because filesystem/Lune tests use string-based `require` paths that differ from strict Roblox runtime usage. Full engine-level typecheck in CI is intentionally not over-engineered here.
 
 ## CI
-GitHub Actions workflow `.github/workflows/ci.yml` runs on push and pull request:
+GitHub Actions workflow `.github/workflows/ci.yml` runs on push and pull request with concurrency cancellation (new pushes cancel in-progress CI for the same ref), a 15-minute timeout, and Wally dependency caching:
 1. checkout
-2. bootstrap environment with `./scripts/setup_env.sh` (mise trust/install + Wally install)
-3. format check
-4. lint
-5. tests
-6. Rojo build validation
+2. setup mise tools
+3. restore/save `.wally` + `Packages` cache
+4. bootstrap environment with `./scripts/setup_env.sh` (mise trust/install + Wally install)
+5. format check
+6. lint
+7. deterministic unit tests
+8. Rojo build validation
+9. upload `build.rbxlx` as a short-lived CI artifact
 
 ## CD scaffold (manual/safe by default)
-`.github/workflows/deploy.yml` is a `workflow_dispatch` placeholder scaffold.
+`.github/workflows/deploy.yml` remains a `workflow_dispatch` scaffold, now with build artifact upload and non-failing secret validation.
 
-Before enabling real upload, set GitHub Secrets:
-- `ROBLOX_UNIVERSE_ID`
-- `ROBLOX_PLACE_ID`
-- `ROBLOX_OPEN_CLOUD_API_KEY`
+Deploy flow:
+1. checkout + setup tools + cached dependency bootstrap
+2. build `build.rbxlx`
+3. upload the build artifact
+4. check whether these GitHub Secrets are configured:
+   - `ROBLOX_UNIVERSE_ID`
+   - `ROBLOX_PLACE_ID`
+   - `ROBLOX_OPEN_CLOUD_API_KEY`
+5. run placeholder upload step only when all three secrets exist (otherwise workflow stays green and reports skip)
 
-Then replace placeholder upload step with your trusted upload mechanism/tool that targets your universe/place IDs.
+When you are ready for production publish, replace the placeholder upload step with your trusted upload mechanism/tool that targets your universe/place IDs.
