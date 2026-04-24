@@ -13,6 +13,12 @@ local function runCase(name: string, fn: () -> ())
     print(string.format('[PASS] %s', name))
 end
 
+local rankConfigs = {
+    { name = 'r1', requiredScore = 0 },
+    { name = 'r2', requiredScore = 100 },
+    { name = 'r3', requiredScore = 1000 },
+}
+
 local function tick(state, overrides)
     local defaultInput = {
         deltaSeconds = 1,
@@ -37,7 +43,10 @@ local function tick(state, overrides)
         },
         isInsideRebirthZone = false,
         scoreIntervalSeconds = 1,
-        rebirthScoreDivisor = 1000,
+        rankConfigs = rankConfigs,
+        rebirthCatchUpPerRebirth = 7,
+        maxCatchUpMultiplier = 30,
+        postRecordRebirthMultiplier = 1,
     }
 
     for key, value in pairs(overrides) do
@@ -47,7 +56,7 @@ local function tick(state, overrides)
     return ZoneProgressionLogic.tick(state, defaultInput)
 end
 
-runCase('standing in first age zone increments by one', function()
+runCase('standing in first age zone increments by one without rebirth catch-up', function()
     local result = tick(ZoneProgressionLogic.newState(0), {
         isInsideAgeZones = {
             true,
@@ -60,8 +69,8 @@ runCase('standing in first age zone increments by one', function()
     expectEqual(result.state.rebirths, 0, 'rebirths should start at zero')
 end)
 
-runCase('rebirth count multiplies score gain per tick', function()
-    local result = tick(ZoneProgressionLogic.newState(0, 2), {
+runCase('catch-up multiplier applies when current score is below highest achieved score', function()
+    local result = tick(ZoneProgressionLogic.newState(0, 2, 500, 2, 2), {
         isInsideAgeZones = {
             true,
             false,
@@ -69,11 +78,11 @@ runCase('rebirth count multiplies score gain per tick', function()
         },
     })
 
-    expectEqual(result.state.score, 2, 'two rebirths should double zone score gain')
+    expectEqual(result.state.score, 15, '2 rebirths should apply 15x catch-up multiplier')
 end)
 
-runCase('bonus score multiplier from lucky chest stacks with rebirth multiplier', function()
-    local result = tick(ZoneProgressionLogic.newState(0, 2), {
+runCase('bonus score multiplier stacks with catch-up multiplier', function()
+    local result = tick(ZoneProgressionLogic.newState(0, 2, 500, 2, 2), {
         isInsideAgeZones = {
             true,
             false,
@@ -82,19 +91,25 @@ runCase('bonus score multiplier from lucky chest stacks with rebirth multiplier'
         bonusScoreMultiplier = 10,
     })
 
-    expectEqual(result.state.score, 20, '2 rebirths and 10x boost should multiply zone gain')
+    expectEqual(result.state.score, 150, '10x boost should stack with catch-up multiplier')
 end)
-runCase('entering rebirth zone resets score and awards rebirths', function()
-    local result = tick(ZoneProgressionLogic.newState(2100, 3), {
+
+runCase('entering rebirth zone resets score and increments rebirths by exactly one', function()
+    local result = tick(ZoneProgressionLogic.newState(2100, 3, 2100, 3, 1), {
         isInsideRebirthZone = true,
     })
 
     expectEqual(result.state.score, 0, 'rebirth should reset score to zero')
-    expectEqual(result.state.rebirths, 5, 'rebirth should award floor(score / 1000)')
+    expectEqual(result.state.rebirths, 4, 'rebirth should increment by one')
+    expectEqual(
+        result.state.highestScoreAchieved,
+        2100,
+        'rebirth should preserve highest score achieved'
+    )
 end)
 
 runCase('staying in rebirth zone does not repeatedly grant rebirths', function()
-    local state = ZoneProgressionLogic.newState(2100, 3)
+    local state = ZoneProgressionLogic.newState(2100, 3, 2100, 3, 1)
     local first = tick(state, {
         isInsideRebirthZone = true,
     })
@@ -102,63 +117,56 @@ runCase('staying in rebirth zone does not repeatedly grant rebirths', function()
         isInsideRebirthZone = true,
     })
 
-    expectEqual(second.state.rebirths, 5, 'rebirth grants should only happen on zone entry')
+    expectEqual(second.state.rebirths, 4, 'rebirth grants should only happen on zone entry')
 end)
 
-runCase('locked age zone increments when requirement is met', function()
-    local result = tick(ZoneProgressionLogic.newState(100), {
+runCase('catch-up multiplier caps at max catch-up multiplier', function()
+    local result = tick(ZoneProgressionLogic.newState(0, 10, 100, 1, 1), {
         isInsideAgeZones = {
-            false,
             true,
+            false,
             false,
         },
     })
 
-    expectEqual(result.state.score, 150, 'second age zone should increment by fifty')
+    expectEqual(result.state.score, 30, 'catch-up should cap at 30x multiplier')
 end)
 
-runCase('locked age zone does not increment when requirement is unmet', function()
-    local result = tick(ZoneProgressionLogic.newState(99), {
+runCase('catch-up multiplier becomes one at or above highest score achieved', function()
+    local result = tick(ZoneProgressionLogic.newState(100, 4, 100, 2, 2), {
         isInsideAgeZones = {
-            false,
             true,
+            false,
             false,
         },
     })
 
-    expectEqual(result.state.score, 99, 'second age zone should stay locked below requirement')
+    expectEqual(result.state.score, 101, 'no catch-up multiplier should apply at record score')
 end)
 
-runCase('reaching requirement in one age unlocks next age in the same tick', function()
-    local result = tick(ZoneProgressionLogic.newState(99), {
+runCase('highest rank and age are preserved and updated on score growth', function()
+    local result = tick(ZoneProgressionLogic.newState(100, 0, 100, 1, 1), {
         isInsideAgeZones = {
-            true,
+            false,
             true,
             false,
         },
     })
 
     expectEqual(
-        result.state.score,
-        150,
-        'first age gain should unlock second age gain in the same tick'
+        result.state.highestRankAchieved,
+        2,
+        'score growth in unlocked zone should update highest rank'
+    )
+    expectEqual(
+        result.state.highestAgeAchieved,
+        2,
+        'score growth in unlocked zone should update highest age'
     )
 end)
 
-runCase('multiple unlocked ages stack in a single tick', function()
-    local result = tick(ZoneProgressionLogic.newState(1000), {
-        isInsideAgeZones = {
-            true,
-            true,
-            true,
-        },
-    })
-
-    expectEqual(result.state.score, 1551, 'all unlocked age increments should stack')
-end)
-
 runCase('rebirth resets accumulated partial time across all ages', function()
-    local first = tick(ZoneProgressionLogic.newState(1999, 0), {
+    local first = tick(ZoneProgressionLogic.newState(1999, 0, 1999, 3, 3), {
         deltaSeconds = 0.5,
         isInsideAgeZones = {
             true,
