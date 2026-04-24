@@ -486,7 +486,11 @@ local function updateRebirthZoneLabel(score: number, rebirths: number)
 end
 
 local function setScoreAndRebirths(score: number, rebirths: number)
-    scoreLabel.Text = string.format('Score: %s', NumberFormat.formatCompact(score))
+    scoreLabel.Text = string.format(
+        'Score: %s (%s)',
+        NumberFormat.formatCompact(score),
+        NumberFormat.formatWithCommas(score)
+    )
     rebirthsLabel.Text = string.format('Rebirths: %s', NumberFormat.formatCompact(rebirths))
     nextUnlockLabel.Text = ZoneUnlockUiLogic.buildNextUnlockText(
         score,

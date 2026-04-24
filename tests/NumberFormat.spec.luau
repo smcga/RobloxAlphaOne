@@ -60,3 +60,19 @@ runCase('1e66 hits scientific notation boundary', function()
         error(string.format('expected scientific notation at 1e66 boundary, got %s', formatted))
     end
 end)
+
+runCase('formatWithCommas groups integer thousands for readability', function()
+    expectEqual(
+        NumberFormat.formatWithCommas(123456789),
+        '123,456,789',
+        'integer thousands should include comma separators'
+    )
+end)
+
+runCase('formatWithCommas floors decimals and preserves sign', function()
+    expectEqual(
+        NumberFormat.formatWithCommas(-1234.99),
+        '-1,234',
+        'decimal values should floor to stable whole numbers'
+    )
+end)

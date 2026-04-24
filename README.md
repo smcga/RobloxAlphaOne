@@ -8,7 +8,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Dynamically tints the sky based on the scoring zone your character is currently standing in, then returns to a neutral sky tint when outside score zones.
 - Spawns players at an `Age of Beads`-side spawn pad instead of the world center.
 - Plays looping background music from `assets/Ascension.mp3` (`rbxasset://assets/Ascension.mp3`).
-- Shows `Score: 0` UI on join/spawn.
+- Shows `Score: 0 (0)` UI on join/spawn with compact + exact comma-grouped value.
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
 - Shows `Rebirths: 0` UI under score on join/spawn.
 - Shows a live next-unlock tracker (for example `Next: Age of Brass at 600 (595 to go)`) so players can clearly see the score needed for the next age.
