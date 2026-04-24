@@ -32,6 +32,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Entering a locked age zone before meeting its score requirement now flings the player away, kills them, plays a global death SFX, and bursts a cloud of `Nope!` text particles.
 - Stops score gain immediately when leaving each zone.
 - Automatically sanitizes corrupted/legacy progression values (such as `NaN`/infinite score or rebirth fields) so ongoing score gain can recover instead of getting stuck.
+- Applies post-record score multipliers only after at least one rebirth, so zero-rebirth players always keep baseline score gain.
 - Adds a server-authoritative Lucky Chest system: once every 5 minutes players can open a chest that spins category then reward item with green/blue/purple/orange/gold rarity odds and can grant score, rebirths, hats, pets, vehicle mounts, or a 1-minute 10x score boost.
 - Shows a timed Lucky Chest UI panel and a full-screen animated spin reveal for category and reward rarity each time the chest is opened.
 - Keeps score server-authoritative and persistent across death/rejoin with Roblox DataStore.

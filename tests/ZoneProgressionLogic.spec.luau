@@ -249,3 +249,29 @@ runCase('legacy corrupted state values recover and continue scoring', function()
     expectEqual(result.state.highestRankAchieved, 1, 'highest rank should clamp to minimum rank')
     expectEqual(result.state.highestAgeAchieved, 1, 'highest age should clamp to minimum age')
 end)
+
+runCase('post-record multiplier does not block scoring before first rebirth', function()
+    local result = tick(ZoneProgressionLogic.newState(100, 0, 100, 2, 2), {
+        isInsideAgeZones = {
+            true,
+            false,
+            false,
+        },
+        postRecordRebirthMultiplier = 0,
+    })
+
+    expectEqual(result.state.score, 101, 'zero rebirth players should still gain baseline score')
+end)
+
+runCase('post-record multiplier applies only after rebirth players catch up', function()
+    local result = tick(ZoneProgressionLogic.newState(100, 1, 100, 2, 2), {
+        isInsideAgeZones = {
+            true,
+            false,
+            false,
+        },
+        postRecordRebirthMultiplier = 2,
+    })
+
+    expectEqual(result.state.score, 102, 'rebirth players at prior best score should get post-record boost')
+end)

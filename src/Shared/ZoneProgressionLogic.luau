@@ -95,6 +95,17 @@ function ZoneProgressionLogic.tick(
         or ProgressionBalance.MAX_CATCH_UP_MULTIPLIER
     local postRecordRebirthMultiplier = sanitizeFiniteNumber(input.postRecordRebirthMultiplier, nil)
         or ProgressionBalance.POST_RECORD_REBIRTH_MULTIPLIER
+    local safeCatchUpPerRebirth = math.max(catchUpPerRebirth, 0)
+    local safeMaxCatchUpMultiplier = math.max(maxCatchUpMultiplier, 1)
+    local safePostRecordRebirthMultiplier = math.max(postRecordRebirthMultiplier, 1)
+    local safeBonusScoreMultiplier = math.max(
+        sanitizeFiniteNumber(input.bonusScoreMultiplier, 1) or 1,
+        1
+    )
+    local safeRankScoreMultiplier = math.max(
+        sanitizeFiniteNumber(input.rankScoreMultiplier, 1) or 1,
+        1
+    )
 
     local stateScore = sanitizeFiniteNumber(state.score, 0) or 0
     local highestScoreAchievedState = math.max(
@@ -105,13 +116,21 @@ function ZoneProgressionLogic.tick(
 
     local catchUpMultiplier = 1
     if stateScore < highestScoreAchievedState then
-        catchUpMultiplier = math.min(maxCatchUpMultiplier, 1 + stateRebirths * catchUpPerRebirth)
+        catchUpMultiplier = math.min(
+            safeMaxCatchUpMultiplier,
+            1 + stateRebirths * safeCatchUpPerRebirth
+        )
+    end
+
+    local postRecordMultiplier = 1
+    if stateRebirths > 0 and stateScore >= highestScoreAchievedState then
+        postRecordMultiplier = safePostRecordRebirthMultiplier
     end
 
     local scoreMultiplier = catchUpMultiplier
-        * (sanitizeFiniteNumber(input.bonusScoreMultiplier, 1) or 1)
-        * (sanitizeFiniteNumber(input.rankScoreMultiplier, 1) or 1)
-        * postRecordRebirthMultiplier
+        * safeBonusScoreMultiplier
+        * safeRankScoreMultiplier
+        * postRecordMultiplier
 
     local score = stateScore
     local ageAccumulatorSeconds = {}
