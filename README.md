@@ -18,6 +18,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Displays each player's current rank title above their character's head so other players can see progression at a glance.
 - Grants every rank a unique aura style that ramps up in spectacle with stronger glow, denser particles, animated pulsing light, and scale growth as players climb toward max rank.
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
+- Emits a small sparkle "score particle" burst from a player's avatar when score ticks while standing in an unlocked scoring zone; particles stop as soon as the player exits scoring zones.
 - Shows an owner-only admin panel with buttons to multiply current score (`2x`, `10x`), skip the Lucky Chest cooldown timer, and a guarded reset button that requires a second confirmation click before wiping your own score/rebirths.
 - Extends the owner-only admin panel with an **Add Reward** modal to add Lucky Chest hat/vehicle rewards from Roblox Creator Store asset links or raw asset IDs, persisted in a global server-side reward catalog.
 - Adds a server-authoritative Rewards inventory panel where players can view unlocked hats/mounts, equip one hat, equip one vehicle mount, and unequip either slot.
@@ -149,6 +150,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - The rank title above each player's head updates automatically as score crosses rank thresholds.
    - Your avatar aura transforms every rank with unique colors, stronger particles/light pulses, and increased size at higher ranks.
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
+   - While score is ticking in an unlocked zone, small score particles sparkle off your avatar; leaving zones stops both score gain and score particles.
    - Rebirth grants temporary catch-up acceleration below your previous best score, then progression returns to the baseline timing curve after you catch up.
    - Age zones unlock in sequence as your score passes each requirement threshold.
    - Entering the `Rebirth` zone shows the current rebirth score cost, resets score to `0` only when that cost is met, grants rebirths based on banked score, and preserves highest achieved score/rank/age milestones for catch-up pacing.

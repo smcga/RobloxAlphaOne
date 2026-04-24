@@ -20,6 +20,7 @@ local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic')
 local RebirthLogic = require(Shared:WaitForChild('RebirthLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local RewardCatalogLogic = require(Shared:WaitForChild('RewardCatalogLogic'))
+local ScoreZoneVfxLogic = require(Shared:WaitForChild('ScoreZoneVfxLogic'))
 local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
 local LockedZonePenaltyLogic = require(Shared:WaitForChild('LockedZonePenaltyLogic'))
 local ZoneProgressionLogic = require(Shared:WaitForChild('ZoneProgressionLogic'))
@@ -42,6 +43,7 @@ type PlayerScoreState = {
     lastLockedZonePenaltyClock: number?,
     equippedMountInstance: Model?,
     storedWalkSpeed: number?,
+    scoreParticlesEnabled: boolean,
 }
 
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
@@ -407,6 +409,71 @@ local function restoreWalkSpeed(player: Player, state: PlayerScoreState)
         humanoid.WalkSpeed = state.storedWalkSpeed
     end
     state.storedWalkSpeed = nil
+end
+
+local function getOrCreateScoreParticleEmitter(player: Player): ParticleEmitter?
+    local rootPart = getHumanoidRootPart(player)
+    if not rootPart then
+        return nil
+    end
+
+    local attachment = rootPart:FindFirstChild(Constants.SCORE_PARTICLE_ATTACHMENT_NAME)
+    if not attachment then
+        attachment = Instance.new('Attachment')
+        attachment.Name = Constants.SCORE_PARTICLE_ATTACHMENT_NAME
+        attachment.Parent = rootPart
+    end
+
+    if not attachment:IsA('Attachment') then
+        return nil
+    end
+
+    local emitter = attachment:FindFirstChild(Constants.SCORE_PARTICLE_EMITTER_NAME)
+    if not emitter then
+        emitter = Instance.new('ParticleEmitter')
+        emitter.Name = Constants.SCORE_PARTICLE_EMITTER_NAME
+        emitter.Texture = Constants.SCORE_PARTICLE_TEXTURE
+        emitter.Enabled = false
+        emitter.Rate = 0
+        emitter.Lifetime = Constants.SCORE_PARTICLE_LIFETIME_SECONDS
+        emitter.Speed = Constants.SCORE_PARTICLE_SPEED
+        emitter.SpreadAngle = Constants.SCORE_PARTICLE_SPREAD_ANGLE_DEGREES
+        emitter.Size = Constants.SCORE_PARTICLE_SIZE
+        emitter.Transparency = Constants.SCORE_PARTICLE_TRANSPARENCY
+        emitter.Color = Constants.SCORE_PARTICLE_COLOR
+        emitter.LightEmission = Constants.SCORE_PARTICLE_LIGHT_EMISSION
+        emitter.LightInfluence = Constants.SCORE_PARTICLE_LIGHT_INFLUENCE
+        emitter.Parent = attachment
+    end
+
+    if emitter:IsA('ParticleEmitter') then
+        return emitter
+    end
+
+    return nil
+end
+
+local function setScoreParticlesEnabled(player: Player, state: PlayerScoreState, enabled: boolean)
+    if state.scoreParticlesEnabled == enabled then
+        return
+    end
+
+    state.scoreParticlesEnabled = enabled
+    local emitter = getOrCreateScoreParticleEmitter(player)
+    if emitter then
+        emitter.Enabled = enabled
+    end
+end
+
+local function emitScoreParticles(player: Player, burstCount: number)
+    if burstCount <= 0 then
+        return
+    end
+
+    local emitter = getOrCreateScoreParticleEmitter(player)
+    if emitter then
+        emitter:Emit(burstCount)
+    end
 end
 
 local function configurePartForMount(part: BasePart)
@@ -1171,6 +1238,7 @@ local function createPlayerState(profileData: ProfileData): PlayerScoreState
         lastLockedZonePenaltyClock = nil,
         equippedMountInstance = nil,
         storedWalkSpeed = nil,
+        scoreParticlesEnabled = false,
     }
 end
 
@@ -1304,6 +1372,7 @@ local function initializePlayerState(player: Player)
             pushEquipmentState(player, currentState)
             updateRankTitle(player, currentState.progressionState.score)
             currentState.currentAuraRankIndex = nil
+            currentState.scoreParticlesEnabled = false
             updateRankAura(player, currentState)
             reapplyPersistedEquipment(player, currentState)
         end
@@ -1659,6 +1728,12 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             os.time(),
             Constants.LUCKY_CHEST_SCORE_BOOST_MULTIPLIER
         )
+        local isInsideScoringZone = ScoreZoneVfxLogic.isInsideScoringZone(
+            state.progressionState.score,
+            isInsideAgeZones,
+            Constants.AGE_ZONE_CONFIGS
+        )
+        setScoreParticlesEnabled(player, state, isInsideScoringZone)
 
         local tickResult = ZoneProgressionLogic.tick(state.progressionState, {
             deltaSeconds = deltaSeconds,
@@ -1687,6 +1762,12 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
         then
             local previousScore = state.progressionState.score
             state.progressionState = tickResult.state
+            local particleBurstCount = ScoreZoneVfxLogic.getScoreBurstCount(
+                previousScore,
+                tickResult.state.score,
+                isInsideScoringZone,
+                Constants.SCORE_PARTICLE_BURST_MAX
+            )
 
             local previousRankIndex =
                 RankProgressionLogic.getCurrentRankIndex(previousScore, Constants.RANK_CONFIGS)
@@ -1702,6 +1783,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
                 state.progressionState.rebirths,
                 rankUpEvents
             )
+            emitScoreParticles(player, particleBurstCount)
             updateRankTitle(player, state.progressionState.score)
             requestGlobalTopScoreUpdate(player, state.progressionState.highestScoreAchieved)
             markDirty(state)
