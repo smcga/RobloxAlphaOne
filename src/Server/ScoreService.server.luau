@@ -1459,7 +1459,8 @@ luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
         return
     end
 
-    state.profileData = spinResult.profileData
+    state.profileData =
+        ProfileDataLogic.mergeLuckyChestProfileData(state.profileData, spinResult.profileData)
     local previousRankIndex = RankProgressionLogic.getCurrentRankIndex(
         state.progressionState.score,
         Constants.RANK_CONFIGS

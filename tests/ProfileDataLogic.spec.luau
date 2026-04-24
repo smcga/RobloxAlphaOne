@@ -194,3 +194,61 @@ runCase('toStoredValue serializes sanitized highest achieved values', function()
         'stored globally-counted ranks should remain valid and unique'
     )
 end)
+
+runCase('mergeLuckyChestProfileData updates chest fields but preserves rank tracking', function()
+    local result = ProfileDataLogic.mergeLuckyChestProfileData(
+        ProfileDataLogic.normalize({
+            score = 1234,
+            rebirths = 7,
+            highestScoreAchieved = 5000,
+            highestRankAchieved = 9,
+            highestAgeAchieved = 3,
+            rankReachCounts = { [1] = 2, [5] = 1 },
+            globallyCountedRankIndices = { 1, 5 },
+        }),
+        {
+            nextLuckyChestOpenAt = 360,
+            scoreBoostExpiresAt = 480,
+            unlockedHats = { 'hat_alpha', 'hat_alpha' },
+            unlockedPets = { 'pet_alpha' },
+            unlockedVehicleMounts = { 'mount_alpha' },
+            equippedHatId = 'hat_alpha',
+            equippedVehicleMountId = 'mount_alpha',
+        }
+    )
+
+    expectEqual(result.score, 1234, 'merge should preserve current score')
+    expectEqual(result.rebirths, 7, 'merge should preserve rebirth count')
+    expectEqual(result.nextLuckyChestOpenAt, 360, 'merge should update chest cooldown')
+    expectEqual(result.scoreBoostExpiresAt, 480, 'merge should update boost expiration')
+    expectEqual(result.rankReachCounts[1], 2, 'merge should preserve rank reach counts')
+    expectEqual(result.rankReachCounts[5], 1, 'merge should preserve rank reach counts')
+    expectEqual(
+        #result.globallyCountedRankIndices,
+        2,
+        'merge should preserve globally-counted rank indices'
+    )
+    expectStringEqual(result.equippedHatId or '', 'hat_alpha', 'merge should keep equipped hat')
+end)
+
+runCase('mergeLuckyChestProfileData sanitizes incoming reward inventory data', function()
+    local result = ProfileDataLogic.mergeLuckyChestProfileData(ProfileDataLogic.normalize({}), {
+        nextLuckyChestOpenAt = 900,
+        scoreBoostExpiresAt = 0,
+        unlockedHats = { 'hat_beta', 'hat_beta', 5 },
+        unlockedPets = { 'pet_beta', false },
+        unlockedVehicleMounts = { 'mount_beta' },
+        equippedHatId = 'hat_missing',
+        equippedVehicleMountId = 'mount_beta',
+    })
+
+    expectEqual(#result.unlockedHats, 1, 'merge should sanitize unlocked hats')
+    expectEqual(#result.unlockedPets, 1, 'merge should sanitize unlocked pets')
+    expectEqual(#result.unlockedVehicleMounts, 1, 'merge should sanitize unlocked vehicle mounts')
+    expectEqual(result.equippedHatId, nil, 'merge should clear invalid equipped hat id')
+    expectStringEqual(
+        result.equippedVehicleMountId or '',
+        'mount_beta',
+        'merge should keep valid equipped mount id'
+    )
+end)
