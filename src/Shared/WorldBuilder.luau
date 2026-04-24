@@ -459,6 +459,75 @@ local function ensureAgeOfBeadsSpawn(workspaceRoot: Instance)
     spawnLocation.Transparency = 1
 end
 
+local function ensureGlobalTopScoreScreen(workspaceRoot: Instance)
+    local existing = workspaceRoot:FindFirstChild(Constants.GLOBAL_TOP_SCORE_SCREEN_NAME)
+    local screenPart: Part
+
+    if existing and existing:IsA('Part') then
+        screenPart = existing
+    else
+        if existing then
+            existing:Destroy()
+        end
+
+        screenPart = Instance.new('Part')
+        screenPart.Name = Constants.GLOBAL_TOP_SCORE_SCREEN_NAME
+        screenPart.Parent = workspaceRoot
+    end
+
+    screenPart.Anchored = true
+    screenPart.CanCollide = false
+    screenPart.CanTouch = false
+    screenPart.CanQuery = false
+    screenPart.Material = Enum.Material.Neon
+    screenPart.Color = Color3.fromRGB(20, 20, 34)
+    screenPart.Size = Constants.GLOBAL_TOP_SCORE_SCREEN_SIZE
+    screenPart.CFrame = CFrame.new(
+        Constants.REBIRTH_ZONE_CENTER + Constants.GLOBAL_TOP_SCORE_SCREEN_OFFSET,
+        Constants.REBIRTH_ZONE_CENTER
+    )
+
+    local surfaceGui = screenPart:FindFirstChild('TopScoreSurfaceGui')
+    if not surfaceGui or not surfaceGui:IsA('SurfaceGui') then
+        if surfaceGui then
+            surfaceGui:Destroy()
+        end
+
+        surfaceGui = Instance.new('SurfaceGui')
+        surfaceGui.Name = 'TopScoreSurfaceGui'
+        surfaceGui.Parent = screenPart
+    end
+
+    surfaceGui.Face = Enum.NormalId.Front
+    surfaceGui.AlwaysOnTop = true
+    surfaceGui.CanvasSize = Vector2.new(1920, 1080)
+    surfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+    surfaceGui.PixelsPerStud = 12
+
+    local label = surfaceGui:FindFirstChild('TopScoreLabel')
+    if not label or not label:IsA('TextLabel') then
+        if label then
+            label:Destroy()
+        end
+
+        label = Instance.new('TextLabel')
+        label.Name = 'TopScoreLabel'
+        label.Parent = surfaceGui
+    end
+
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundTransparency = 1
+    label.TextScaled = true
+    label.RichText = false
+    label.TextWrapped = true
+    label.TextXAlignment = Enum.TextXAlignment.Center
+    label.TextYAlignment = Enum.TextYAlignment.Center
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextStrokeTransparency = 0.3
+    label.Font = Enum.Font.GothamBlack
+    label.Text = 'GLOBAL TOP SCORE\nNo champion yet\nSet the first record!'
+end
+
 local function ensureBackgroundMusic()
     local existing = SoundService:FindFirstChild(Constants.BACKGROUND_MUSIC_NAME)
     local sound: Sound
@@ -488,6 +557,7 @@ function WorldBuilder.build(workspaceRoot: Instance)
     ensureBaseplate(workspaceRoot)
     ensureWorldDecor(workspaceRoot)
     ensureAgeOfBeadsSpawn(workspaceRoot)
+    ensureGlobalTopScoreScreen(workspaceRoot)
     ensureBackgroundMusic()
 
     local obsoleteZoneNames = {

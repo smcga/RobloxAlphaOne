@@ -12,6 +12,7 @@ local AdminLogic = require(Shared:WaitForChild('AdminLogic'))
 local Constants = require(Shared:WaitForChild('Constants'))
 local EquipmentLogic = require(Shared:WaitForChild('EquipmentLogic'))
 local LuckyChestLogic = require(Shared:WaitForChild('LuckyChestLogic'))
+local GlobalTopScoreLogic = require(Shared:WaitForChild('GlobalTopScoreLogic'))
 local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local RankAuraLogic = require(Shared:WaitForChild('RankAuraLogic'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
@@ -25,6 +26,7 @@ local ProgressionBalance = require(Shared:WaitForChild('ProgressionBalance'))
 type ZoneProgressionState = ZoneProgressionLogic.ZoneProgressionState
 type ProfileData = ProfileDataLogic.ProfileData
 type AdminReward = RewardCatalogLogic.AdminReward
+type TopScoreRecord = GlobalTopScoreLogic.TopScoreRecord
 
 type PlayerScoreState = {
     progressionState: ZoneProgressionState,
@@ -60,9 +62,11 @@ local equipmentActionResultEvent = Remotes.getOrCreateEquipmentActionResultEvent
 
 local playerStates: { [Player]: PlayerScoreState } = {}
 local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
+local globalTopScoreStore = DataStoreService:GetDataStore(Constants.GLOBAL_TOP_SCORE_DATASTORE_NAME)
 local customRewardCatalogStore =
     DataStoreService:GetDataStore(Constants.CUSTOM_REWARD_CATALOG_DATASTORE_NAME)
 local customRewards: { AdminReward } = {}
+local globalTopScoreRecord: TopScoreRecord = GlobalTopScoreLogic.normalizeRecord(nil)
 local playerMountsFolder = workspace:FindFirstChild('PlayerMounts')
 if not playerMountsFolder then
     playerMountsFolder = Instance.new('Folder')
@@ -591,6 +595,91 @@ local function pushScore(player: Player, score: number, rebirths: number)
     scoreUpdatedEvent:FireClient(player, score, rebirths)
 end
 
+local function getGlobalTopScoreLabel(): TextLabel?
+    local screenPart = workspace:FindFirstChild(Constants.GLOBAL_TOP_SCORE_SCREEN_NAME)
+    if not screenPart or not screenPart:IsA('BasePart') then
+        return nil
+    end
+
+    local surfaceGui = screenPart:FindFirstChild('TopScoreSurfaceGui')
+    if not surfaceGui or not surfaceGui:IsA('SurfaceGui') then
+        return nil
+    end
+
+    local label = surfaceGui:FindFirstChild('TopScoreLabel')
+    if label and label:IsA('TextLabel') then
+        return label
+    end
+
+    return nil
+end
+
+local function refreshGlobalTopScoreScreen()
+    local label = getGlobalTopScoreLabel()
+    if not label then
+        return
+    end
+
+    label.Text = GlobalTopScoreLogic.toScreenText(globalTopScoreRecord)
+end
+
+local function bindGlobalTopScoreScreen()
+    refreshGlobalTopScoreScreen()
+
+    workspace.DescendantAdded:Connect(function(descendant)
+        if descendant.Name == 'TopScoreLabel' and descendant:IsA('TextLabel') then
+            refreshGlobalTopScoreScreen()
+        end
+    end)
+end
+
+local function loadGlobalTopScoreRecord()
+    local success, result = pcall(function()
+        return globalTopScoreStore:GetAsync(Constants.GLOBAL_TOP_SCORE_DATASTORE_KEY)
+    end)
+
+    if not success then
+        warn(string.format('Failed to load global top score: %s', tostring(result)))
+        globalTopScoreRecord = GlobalTopScoreLogic.normalizeRecord(nil)
+        refreshGlobalTopScoreScreen()
+        return
+    end
+
+    globalTopScoreRecord = GlobalTopScoreLogic.normalizeRecord(result)
+    refreshGlobalTopScoreScreen()
+end
+
+local function tryUpdateGlobalTopScore(player: Player, score: number)
+    local candidateRecord =
+        GlobalTopScoreLogic.createCandidateRecord(player.UserId, player.Name, score, os.time())
+
+    if not GlobalTopScoreLogic.shouldReplaceRecord(globalTopScoreRecord, candidateRecord) then
+        return
+    end
+
+    local success, result = pcall(function()
+        return globalTopScoreStore:UpdateAsync(
+            Constants.GLOBAL_TOP_SCORE_DATASTORE_KEY,
+            function(old)
+                local normalizedCurrent = GlobalTopScoreLogic.normalizeRecord(old)
+                if GlobalTopScoreLogic.shouldReplaceRecord(normalizedCurrent, candidateRecord) then
+                    return candidateRecord
+                end
+
+                return normalizedCurrent
+            end
+        )
+    end)
+
+    if not success then
+        warn(string.format('Failed to update global top score: %s', tostring(result)))
+        return
+    end
+
+    globalTopScoreRecord = GlobalTopScoreLogic.normalizeRecord(result)
+    refreshGlobalTopScoreScreen()
+end
+
 local function refreshProgressionHighWatermarks(progressionState: ZoneProgressionState)
     progressionState.highestScoreAchieved =
         math.max(progressionState.highestScoreAchieved, progressionState.score)
@@ -1061,6 +1150,7 @@ end
 local function initializePlayerState(player: Player)
     local state = loadPlayerState(player)
     playerStates[player] = state
+    tryUpdateGlobalTopScore(player, state.progressionState.highestScoreAchieved)
 
     pushScore(player, state.progressionState.score, state.progressionState.rebirths)
     pushLuckyChestStatus(player, state.profileData)
@@ -1115,6 +1205,7 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
 
     pushScore(player, progressionState.score, progressionState.rebirths)
     updateRankTitle(player, progressionState.score)
+    tryUpdateGlobalTopScore(player, progressionState.highestScoreAchieved)
     updateRankAura(player, state)
     markDirty(state)
     savePlayerState(player, false)
@@ -1136,6 +1227,7 @@ adminResetProgressRequestEvent.OnServerEvent:Connect(function(player: Player)
 
     pushScore(player, progressionState.score, progressionState.rebirths)
     updateRankTitle(player, progressionState.score)
+    tryUpdateGlobalTopScore(player, progressionState.highestScoreAchieved)
     updateRankAura(player, state)
     markDirty(state)
     savePlayerState(player, false)
@@ -1231,6 +1323,7 @@ luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
 
     pushScore(player, state.progressionState.score, state.progressionState.rebirths)
     updateRankTitle(player, state.progressionState.score)
+    tryUpdateGlobalTopScore(player, state.progressionState.highestScoreAchieved)
     pushLuckyChestStatus(player, state.profileData)
     pushEquipmentState(player, state)
 
@@ -1335,6 +1428,8 @@ unequipVehicleMountRequestEvent.OnServerEvent:Connect(function(player: Player)
 end)
 
 loadCustomRewardCatalog()
+loadGlobalTopScoreRecord()
+bindGlobalTopScoreScreen()
 
 Players.PlayerAdded:Connect(function(player)
     initializePlayerState(player)
@@ -1430,6 +1525,7 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
         then
             pushScore(player, tickResult.state.score, tickResult.state.rebirths)
             updateRankTitle(player, tickResult.state.score)
+            tryUpdateGlobalTopScore(player, tickResult.state.highestScoreAchieved)
             markDirty(state)
             savePlayerState(player, false)
         end

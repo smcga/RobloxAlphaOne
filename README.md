@@ -33,6 +33,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Adds a server-authoritative Lucky Chest system: once every 5 minutes players can open a chest that spins category then reward item with green/blue/purple/orange/gold rarity odds and can grant score, rebirths, hats, pets, vehicle mounts, or a 1-minute 10x score boost.
 - Shows a timed Lucky Chest UI panel and a full-screen animated spin reveal for category and reward rarity each time the chest is opened.
 - Keeps score server-authoritative and persistent across death/rejoin with Roblox DataStore.
+- Adds a huge floating sky screen near the rebirth zone that shows the all-time top player name and their highest score, sourced from a global server-side DataStore record.
 
 ## Project structure
 - `src/Shared` shared modules/constants/pure logic/remotes.
@@ -150,6 +151,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - Rebirth grants temporary catch-up acceleration below your previous best score, then progression returns to the baseline timing curve after you catch up.
    - Age zones unlock in sequence as your score passes each requirement threshold.
    - Entering the `Rebirth` zone resets score to `0`, grants exactly `+1` rebirth, and preserves highest achieved score/rank/age milestones for catch-up pacing.
+   - A giant floating screen above the rebirth area shows the current all-time top scorer name and best-ever score across all players.
    - Entering a still-locked age zone flings you away, then kills you, while preserving your existing score/rebirth totals.
    - Locked-zone deaths play a shared SFX for everyone and spawn flying `Nope!` text particles around the punished player.
    - If you're the game owner, admin panel buttons can multiply your current score by `2x` or `10x`, skip your Lucky Chest cooldown timer, and can reset your own score/rebirths after a two-click confirmation prompt.
