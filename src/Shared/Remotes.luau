@@ -15,6 +15,13 @@ Remotes.LUCKY_CHEST_STATUS_UPDATED_EVENT = 'LuckyChestStatusUpdated'
 Remotes.LUCKY_CHEST_OPEN_REQUEST_EVENT = 'LuckyChestOpenRequest'
 Remotes.LUCKY_CHEST_OPENED_EVENT = 'LuckyChestOpened'
 
+Remotes.EQUIPMENT_STATE_UPDATED_EVENT = 'EquipmentStateUpdated'
+Remotes.EQUIP_HAT_REQUEST_EVENT = 'EquipHatRequest'
+Remotes.UNEQUIP_HAT_REQUEST_EVENT = 'UnequipHatRequest'
+Remotes.EQUIP_VEHICLE_MOUNT_REQUEST_EVENT = 'EquipVehicleMountRequest'
+Remotes.UNEQUIP_VEHICLE_MOUNT_REQUEST_EVENT = 'UnequipVehicleMountRequest'
+Remotes.EQUIPMENT_ACTION_RESULT_EVENT = 'EquipmentActionResult'
+
 local function getOrCreateFolder(): Folder
     local folder = ReplicatedStorage:FindFirstChild(Remotes.FOLDER_NAME)
     if not folder then
@@ -130,6 +137,54 @@ end
 
 function Remotes.waitForLuckyChestOpenedEvent(): RemoteEvent
     return waitForRemoteEvent(Remotes.LUCKY_CHEST_OPENED_EVENT)
+end
+
+function Remotes.getOrCreateEquipmentStateUpdatedEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.EQUIPMENT_STATE_UPDATED_EVENT)
+end
+
+function Remotes.waitForEquipmentStateUpdatedEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.EQUIPMENT_STATE_UPDATED_EVENT)
+end
+
+function Remotes.getOrCreateEquipHatRequestEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.EQUIP_HAT_REQUEST_EVENT)
+end
+
+function Remotes.waitForEquipHatRequestEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.EQUIP_HAT_REQUEST_EVENT)
+end
+
+function Remotes.getOrCreateUnequipHatRequestEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.UNEQUIP_HAT_REQUEST_EVENT)
+end
+
+function Remotes.waitForUnequipHatRequestEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.UNEQUIP_HAT_REQUEST_EVENT)
+end
+
+function Remotes.getOrCreateEquipVehicleMountRequestEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.EQUIP_VEHICLE_MOUNT_REQUEST_EVENT)
+end
+
+function Remotes.waitForEquipVehicleMountRequestEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.EQUIP_VEHICLE_MOUNT_REQUEST_EVENT)
+end
+
+function Remotes.getOrCreateUnequipVehicleMountRequestEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.UNEQUIP_VEHICLE_MOUNT_REQUEST_EVENT)
+end
+
+function Remotes.waitForUnequipVehicleMountRequestEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.UNEQUIP_VEHICLE_MOUNT_REQUEST_EVENT)
+end
+
+function Remotes.getOrCreateEquipmentActionResultEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.EQUIPMENT_ACTION_RESULT_EVENT)
+end
+
+function Remotes.waitForEquipmentActionResultEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.EQUIPMENT_ACTION_RESULT_EVENT)
 end
 
 return Remotes

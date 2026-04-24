@@ -127,3 +127,17 @@ runCase('custom admin hat rewards are included in chest spins', function()
     expectEqual(result.spinResult.item.id, 'admin_hat_999', 'expected custom reward id')
     expectEqual(result.profileData.unlockedHats[1], 'admin_hat_999', 'expected unlocked custom hat')
 end)
+
+runCase('duplicate cosmetic unlocks are deduplicated', function()
+    local result = LuckyChestLogic.applyChestSpin({
+        nextLuckyChestOpenAt = 0,
+        scoreBoostExpiresAt = 0,
+        unlockedHats = { 'hat_copper_crown' },
+        unlockedPets = {},
+        unlockedVehicleMounts = {},
+    }, 0, 0, 100, 300, 60, randomSequence({ 0.7, 0 }))
+
+    expectTruthy(result, 'spin should produce a result')
+    expectEqual(result.spinResult.category, 'hat', 'expected hat category')
+    expectEqual(#result.profileData.unlockedHats, 1, 'hat unlock list should not duplicate entries')
+end)
