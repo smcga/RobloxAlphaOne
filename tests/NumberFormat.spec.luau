@@ -46,3 +46,17 @@ runCase('trims unnecessary trailing decimal zeros', function()
         'should avoid trailing .0 for compact values'
     )
 end)
+
+runCase('keeps 9.99e65 in compact suffix format', function()
+    local formatted = NumberFormat.formatCompact(9.99e65)
+    if string.find(formatted, 'e') ~= nil then
+        error(string.format('expected compact suffix for 9.99e65, got %s', formatted))
+    end
+end)
+
+runCase('1e66 hits scientific notation boundary', function()
+    local formatted = NumberFormat.formatCompact(1e66)
+    if string.find(formatted, 'e') == nil then
+        error(string.format('expected scientific notation at 1e66 boundary, got %s', formatted))
+    end
+end)

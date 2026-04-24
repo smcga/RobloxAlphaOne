@@ -20,6 +20,7 @@ local RewardCatalogLogic = require(Shared:WaitForChild('RewardCatalogLogic'))
 local ZoneLogic = require(Shared:WaitForChild('ZoneLogic'))
 local LockedZonePenaltyLogic = require(Shared:WaitForChild('LockedZonePenaltyLogic'))
 local ZoneProgressionLogic = require(Shared:WaitForChild('ZoneProgressionLogic'))
+local ProgressionBalance = require(Shared:WaitForChild('ProgressionBalance'))
 
 type ZoneProgressionState = ZoneProgressionLogic.ZoneProgressionState
 type ProfileData = ProfileDataLogic.ProfileData
@@ -584,6 +585,22 @@ local function pushScore(player: Player, score: number, rebirths: number)
     scoreUpdatedEvent:FireClient(player, score, rebirths)
 end
 
+local function refreshProgressionHighWatermarks(progressionState: ZoneProgressionState)
+    progressionState.highestScoreAchieved =
+        math.max(progressionState.highestScoreAchieved, progressionState.score)
+    progressionState.highestRankAchieved = math.max(
+        progressionState.highestRankAchieved,
+        RankProgressionLogic.getCurrentRankIndex(progressionState.score, Constants.RANK_CONFIGS)
+    )
+    progressionState.highestAgeAchieved = math.max(
+        progressionState.highestAgeAchieved,
+        ProgressionBalance.getHighestUnlockedAgeIndex(
+            progressionState.score,
+            Constants.AGE_ZONE_CONFIGS
+        )
+    )
+end
+
 local function pushLuckyChestStatus(player: Player, profileData: ProfileData)
     luckyChestStatusUpdatedEvent:FireClient(
         player,
@@ -910,7 +927,13 @@ end
 
 local function createPlayerState(profileData: ProfileData): PlayerScoreState
     return {
-        progressionState = ZoneProgressionLogic.newState(profileData.score, profileData.rebirths),
+        progressionState = ZoneProgressionLogic.newState(
+            profileData.score,
+            profileData.rebirths,
+            profileData.highestScoreAchieved,
+            profileData.highestRankAchieved,
+            profileData.highestAgeAchieved
+        ),
         profileData = profileData,
         dirtyVersion = 0,
         lastSavedVersion = 0,
@@ -942,6 +965,9 @@ end
 local function syncProfileWithProgression(state: PlayerScoreState)
     state.profileData.score = state.progressionState.score
     state.profileData.rebirths = state.progressionState.rebirths
+    state.profileData.highestScoreAchieved = state.progressionState.highestScoreAchieved
+    state.profileData.highestRankAchieved = state.progressionState.highestRankAchieved
+    state.profileData.highestAgeAchieved = state.progressionState.highestAgeAchieved
 end
 
 local function savePlayerState(player: Player, force: boolean)
@@ -1079,6 +1105,7 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
 
     local progressionState = state.progressionState
     progressionState.score = AdminLogic.applyScoreMultiplier(progressionState.score, multiplier)
+    refreshProgressionHighWatermarks(progressionState)
 
     pushScore(player, progressionState.score, progressionState.rebirths)
     updateRankTitle(player, progressionState.score)
@@ -1099,6 +1126,7 @@ adminResetProgressRequestEvent.OnServerEvent:Connect(function(player: Player)
 
     local progressionState = state.progressionState
     progressionState.score, progressionState.rebirths = AdminLogic.resetScoreAndRebirths()
+    refreshProgressionHighWatermarks(progressionState)
 
     pushScore(player, progressionState.score, progressionState.rebirths)
     updateRankTitle(player, progressionState.score)
@@ -1193,6 +1221,7 @@ luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
     state.profileData = spinResult.profileData
     state.progressionState.score = spinResult.score
     state.progressionState.rebirths = spinResult.rebirths
+    refreshProgressionHighWatermarks(state.progressionState)
 
     pushScore(player, state.progressionState.score, state.progressionState.rebirths)
     updateRankTitle(player, state.progressionState.score)
@@ -1382,7 +1411,10 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             ageZoneConfigs = ageZoneProgressionConfigs,
             scoreIntervalSeconds = Constants.SCORE_INTERVAL_SECONDS,
             isInsideRebirthZone = isInsideRebirthZone,
-            rebirthScoreDivisor = Constants.REBIRTH_SCORE_DIVISOR,
+            rankConfigs = Constants.RANK_CONFIGS,
+            rebirthCatchUpPerRebirth = Constants.REBIRTH_CATCH_UP_PER_REBIRTH,
+            maxCatchUpMultiplier = Constants.MAX_CATCH_UP_MULTIPLIER,
+            postRecordRebirthMultiplier = Constants.POST_RECORD_REBIRTH_MULTIPLIER,
             bonusScoreMultiplier = boostedMultiplier,
         })
 
