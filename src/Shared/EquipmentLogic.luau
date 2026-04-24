@@ -27,11 +27,7 @@ export type ForcedAssetOverrides = {
 local EquipmentLogic = {}
 
 local function cloneStringArray(values: { string }): { string }
-    local cloned = {}
-    for index, value in ipairs(values) do
-        cloned[index] = value
-    end
-    return cloned
+    return table.clone(values)
 end
 
 local function isRewardIdUnlocked(unlockedIds: { string }, rewardId: string): boolean

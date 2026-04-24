@@ -103,11 +103,7 @@ local function getRewardLookup()
 end
 
 local function cloneArray(values: { string }): { string }
-    local cloned = {}
-    for index, value in ipairs(values) do
-        cloned[index] = value
-    end
-    return cloned
+    return table.clone(values)
 end
 
 local function pushEquipmentState(player: Player, state: PlayerScoreState)
