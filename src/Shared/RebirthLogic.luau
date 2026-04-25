@@ -64,13 +64,7 @@ function RebirthLogic.getPreviewGrant(
         return 0
     end
 
-    local scoreRatio = clampedScore / requirement
-    local scoreBonus = math.floor(
-        ((math.max(scoreRatio - 1, 0)) ^ config.scoreToBonusPower) * config.scoreToBonusScale
-    )
-    scoreBonus = clamp(scoreBonus, 0, config.maxBonusRebirthsFromScore)
-
-    local grant = 1 + scoreBonus
+    local grant = math.floor(clampedScore / requirement)
     if
         isInsideFinalAgeZone
         and RebirthLogic.isHourlyFinalZoneBonusActive(unixTimeSeconds, config.hourlyFinalZoneBonus)

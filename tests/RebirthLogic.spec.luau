@@ -20,8 +20,8 @@ local function runCase(name: string, fn: () -> ())
 end
 
 local config: RebirthLogic.RebirthConfig = {
-    baseRequirementScore = 1200,
-    requirementGrowthPerRebirth = 350,
+    baseRequirementScore = 1000,
+    requirementGrowthPerRebirth = 0,
     scoreToBonusPower = 0.72,
     scoreToBonusScale = 2.6,
     maxBonusRebirthsFromScore = 20,
@@ -32,23 +32,28 @@ local config: RebirthLogic.RebirthConfig = {
     },
 }
 
-runCase('required score scales with rebirth count', function()
-    expectEqual(RebirthLogic.getRequiredScore(0, config), 1200, 'base requirement should be used')
+runCase('required score stays fixed at 1000 for every rebirth', function()
+    expectEqual(RebirthLogic.getRequiredScore(0, config), 1000, 'base requirement should be used')
     expectEqual(
         RebirthLogic.getRequiredScore(3, config),
-        2250,
-        'requirement should grow linearly by rebirth count'
+        1000,
+        'requirement should remain fixed regardless of rebirth count'
     )
 end)
 
 runCase('preview grant is zero when score is below requirement', function()
-    local grant = RebirthLogic.getPreviewGrant(1199, 0, false, 0, config)
+    local grant = RebirthLogic.getPreviewGrant(999, 0, false, 0, config)
     expectEqual(grant, 0, 'not enough score should block rebirth grant')
 end)
 
-runCase('preview grant adds score-based rebirth bonus above requirement', function()
+runCase('preview grant gives one rebirth per 1000 score spent', function()
     local grant = RebirthLogic.getPreviewGrant(3600, 0, false, 0, config)
-    expectTruthy(grant > 1, 'extra score should yield more than one rebirth')
+    expectEqual(grant, 3, '3600 score should grant three rebirths at 1000 each')
+end)
+
+runCase('high score rebirth grant scales linearly with score spent', function()
+    local grant = RebirthLogic.getPreviewGrant(165000, 0, false, 0, config)
+    expectEqual(grant, 165, '165000 score should grant 165 rebirths at 1000 each')
 end)
 
 runCase('hourly bonus only applies inside the final age zone', function()

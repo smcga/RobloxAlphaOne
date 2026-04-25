@@ -1537,9 +1537,12 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             isInsideFinalAgeZone = isInsideAgeZones[#Constants.AGE_ZONE_CONFIGS] == true,
         })
 
+        local previousState = state.progressionState
+        state.progressionState = tickResult.state
+
         if
-            tickResult.state.score ~= state.progressionState.score
-            or tickResult.state.rebirths ~= state.progressionState.rebirths
+            tickResult.state.score ~= previousState.score
+            or tickResult.state.rebirths ~= previousState.rebirths
         then
             pushScore(player, tickResult.state.score, tickResult.state.rebirths)
             updateRankTitle(player, tickResult.state.score)
@@ -1548,7 +1551,6 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             savePlayerState(player, false)
         end
 
-        state.progressionState = tickResult.state
         updateRankAura(player, state)
     end
 end)
