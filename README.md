@@ -149,7 +149,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
    - Rebirth grants temporary catch-up acceleration below your previous best score, then progression returns to the baseline timing curve after you catch up.
    - Age zones unlock in sequence as your score passes each requirement threshold.
-   - Entering the `Rebirth` zone shows the current fixed rebirth score cost (`1,000`), grants `+1 rebirth` per `1,000` score spent, resets score to `0` only when that cost is met, and preserves highest achieved score/rank/age milestones for catch-up pacing.
+   - Entering the `Rebirth` zone shows the current fixed rebirth score cost (`1,000`), grants `+1 rebirth` per `1,000` score spent, resets score to `0` only when that cost is met, and resumes zone-based ticking from zero (with multipliers) while preserving highest achieved score/rank/age milestones for catch-up pacing.
    - A giant floating screen above the rebirth area shows the current all-time top scorer name and best-ever score across all players.
    - Entering a still-locked age zone flings you away, then kills you, while preserving your existing score/rebirth totals.
    - Locked-zone deaths play a shared SFX for everyone and spawn flying `Nope!` text particles around the punished player.

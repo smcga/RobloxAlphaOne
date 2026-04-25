@@ -213,6 +213,57 @@ runCase('rebirth zone does not grant rebirth when score is below rebirth require
     expectEqual(result.state.rebirths, 0, 'failed rebirth should not grant rebirths')
 end)
 
+runCase(
+    'rebirth does not restore pre-rebirth score or reduce granted rebirths on next zone tick',
+    function()
+        local preRebirthScore = 155000000
+        local rebirthed =
+            tick(ZoneProgressionLogic.newState(preRebirthScore, 12, preRebirthScore, 3, 3), {
+                isInsideRebirthZone = true,
+                rebirthConfig = {
+                    baseRequirementScore = 1000,
+                    requirementGrowthPerRebirth = 0,
+                    scoreToBonusPower = 0.72,
+                    scoreToBonusScale = 2.6,
+                    maxBonusRebirthsFromScore = 20,
+                    hourlyFinalZoneBonus = {
+                        chancePerHour = 0,
+                        activeWindowSeconds = 180,
+                        bonusRebirths = 2,
+                    },
+                },
+                nowUnixTime = 0,
+                isInsideFinalAgeZone = false,
+            })
+
+        local afterFirstZoneTick = tick(rebirthed.state, {
+            isInsideAgeZones = {
+                true,
+                false,
+                false,
+            },
+            isInsideRebirthZone = false,
+        })
+
+        expectEqual(rebirthed.state.score, 0, 'rebirth should reset score to zero immediately')
+        expectEqual(
+            rebirthed.state.rebirths,
+            155012,
+            'rebirth should include one rebirth per 1000 score'
+        )
+        expectEqual(
+            afterFirstZoneTick.state.rebirths,
+            rebirthed.state.rebirths,
+            'next zone tick should not roll rebirth count back'
+        )
+        expectEqual(
+            afterFirstZoneTick.state.score,
+            30,
+            'next zone tick should restart from zero and use catch-up multiplier, not restore prior score'
+        )
+    end
+)
+
 runCase('rank multiplier contributes to score gain', function()
     local result = tick(ZoneProgressionLogic.newState(0, 0, 500, 2, 2), {
         isInsideAgeZones = {
