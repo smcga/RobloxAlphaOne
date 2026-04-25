@@ -20,8 +20,8 @@ local function runCase(name: string, fn: () -> ())
 end
 
 local config: RebirthLogic.RebirthConfig = {
-    baseRequirementScore = 1200,
-    requirementGrowthPerRebirth = 350,
+    baseRequirementScore = 1000,
+    requirementGrowthPerRebirth = 0,
     scoreToBonusPower = 0.72,
     scoreToBonusScale = 2.6,
     maxBonusRebirthsFromScore = 20,
@@ -32,17 +32,17 @@ local config: RebirthLogic.RebirthConfig = {
     },
 }
 
-runCase('required score scales with rebirth count', function()
-    expectEqual(RebirthLogic.getRequiredScore(0, config), 1200, 'base requirement should be used')
+runCase('required score stays fixed at 1000 for every rebirth', function()
+    expectEqual(RebirthLogic.getRequiredScore(0, config), 1000, 'base requirement should be used')
     expectEqual(
         RebirthLogic.getRequiredScore(3, config),
-        2250,
-        'requirement should grow linearly by rebirth count'
+        1000,
+        'requirement should remain fixed regardless of rebirth count'
     )
 end)
 
 runCase('preview grant is zero when score is below requirement', function()
-    local grant = RebirthLogic.getPreviewGrant(1199, 0, false, 0, config)
+    local grant = RebirthLogic.getPreviewGrant(999, 0, false, 0, config)
     expectEqual(grant, 0, 'not enough score should block rebirth grant')
 end)
 
