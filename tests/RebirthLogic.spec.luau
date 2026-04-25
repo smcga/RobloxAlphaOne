@@ -46,9 +46,14 @@ runCase('preview grant is zero when score is below requirement', function()
     expectEqual(grant, 0, 'not enough score should block rebirth grant')
 end)
 
-runCase('preview grant adds score-based rebirth bonus above requirement', function()
+runCase('preview grant gives one rebirth per 1000 score spent', function()
     local grant = RebirthLogic.getPreviewGrant(3600, 0, false, 0, config)
-    expectTruthy(grant > 1, 'extra score should yield more than one rebirth')
+    expectEqual(grant, 3, '3600 score should grant three rebirths at 1000 each')
+end)
+
+runCase('high score rebirth grant scales linearly with score spent', function()
+    local grant = RebirthLogic.getPreviewGrant(165000, 0, false, 0, config)
+    expectEqual(grant, 165, '165000 score should grant 165 rebirths at 1000 each')
 end)
 
 runCase('hourly bonus only applies inside the final age zone', function()
