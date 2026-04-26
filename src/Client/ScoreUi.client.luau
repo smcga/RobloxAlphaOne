@@ -554,6 +554,7 @@ end
 local scoreUpdatedEvent = Remotes.waitForScoreUpdatedEvent()
 local adminScoreMultiplyRequestEvent = Remotes.waitForAdminScoreMultiplyRequestEvent()
 local adminResetProgressRequestEvent = Remotes.waitForAdminResetProgressRequestEvent()
+local adminGainRankRequestEvent = Remotes.waitForAdminGainRankRequestEvent()
 local adminSkipLuckyChestTimerRequestEvent = Remotes.waitForAdminSkipLuckyChestTimerRequestEvent()
 local adminStateUpdatedEvent = Remotes.waitForAdminStateUpdatedEvent()
 local luckyChestStatusUpdatedEvent = Remotes.waitForLuckyChestStatusUpdatedEvent()
@@ -571,7 +572,7 @@ local equipmentActionResultEvent = Remotes.waitForEquipmentActionResultEvent()
 
 local adminPanel = Instance.new('Frame')
 adminPanel.Name = 'AdminPanel'
-adminPanel.Size = UDim2.fromOffset(220, 296)
+adminPanel.Size = UDim2.fromOffset(220, 340)
 adminPanel.Position = UDim2.fromOffset(16, 280)
 adminPanel.BackgroundTransparency = 0.3
 adminPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -633,6 +634,20 @@ resetProgressButton.Parent = adminPanel
 local resetProgressButtonCorner = corner:Clone()
 resetProgressButtonCorner.Parent = resetProgressButton
 
+local gainRankButton = Instance.new('TextButton')
+gainRankButton.Name = 'GainRankButton'
+gainRankButton.Size = UDim2.fromOffset(188, 36)
+gainRankButton.Position = UDim2.fromOffset(16, 36 + ((#Constants.ADMIN_SCORE_MULTIPLIERS + 2) * 44))
+gainRankButton.BackgroundColor3 = Color3.fromRGB(60, 86, 130)
+gainRankButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+gainRankButton.Font = Enum.Font.GothamBold
+gainRankButton.TextSize = 16
+gainRankButton.Text = 'Gain +1 Rank'
+gainRankButton.Parent = adminPanel
+
+local gainRankButtonCorner = corner:Clone()
+gainRankButtonCorner.Parent = gainRankButton
+
 local skipLuckyChestTimerButton = Instance.new('TextButton')
 skipLuckyChestTimerButton.Name = 'SkipLuckyChestTimerButton'
 skipLuckyChestTimerButton.Size = UDim2.fromOffset(188, 36)
@@ -665,7 +680,7 @@ resetConfirmationLabel.Parent = adminPanel
 local addRewardButton = Instance.new('TextButton')
 addRewardButton.Name = 'AddRewardButton'
 addRewardButton.Size = UDim2.fromOffset(188, 36)
-addRewardButton.Position = UDim2.fromOffset(16, 212)
+addRewardButton.Position = UDim2.fromOffset(16, 256)
 addRewardButton.BackgroundColor3 = Color3.fromRGB(66, 84, 130)
 addRewardButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 addRewardButton.Font = Enum.Font.GothamBold
@@ -676,7 +691,7 @@ addRewardButton.Parent = adminPanel
 local addRewardButtonCorner = corner:Clone()
 addRewardButtonCorner.Parent = addRewardButton
 
-resetConfirmationLabel.Position = UDim2.fromOffset(16, 252)
+resetConfirmationLabel.Position = UDim2.fromOffset(16, 296)
 
 local addRewardOverlay = Instance.new('TextButton')
 addRewardOverlay.Name = 'AddRewardOverlay'
@@ -977,6 +992,10 @@ resetProgressButton.Activated:Connect(function()
 
     adminResetProgressRequestEvent:FireServer()
     clearResetConfirmationPrompt()
+end)
+
+gainRankButton.Activated:Connect(function()
+    adminGainRankRequestEvent:FireServer()
 end)
 
 skipLuckyChestTimerButton.Activated:Connect(function()

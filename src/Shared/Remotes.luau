@@ -6,6 +6,7 @@ Remotes.FOLDER_NAME = 'Remotes'
 Remotes.SCORE_UPDATED_EVENT = 'ScoreUpdated'
 Remotes.ADMIN_SCORE_MULTIPLY_REQUEST_EVENT = 'AdminScoreMultiplyRequest'
 Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT = 'AdminResetProgressRequest'
+Remotes.ADMIN_GAIN_RANK_REQUEST_EVENT = 'AdminGainRankRequest'
 Remotes.ADMIN_SKIP_LUCKY_CHEST_TIMER_REQUEST_EVENT = 'AdminSkipLuckyChestTimerRequest'
 Remotes.ADMIN_ADD_REWARD_REQUEST_EVENT = 'AdminAddRewardRequest'
 Remotes.ADMIN_ADD_REWARD_RESULT_EVENT = 'AdminAddRewardResult'
@@ -73,6 +74,14 @@ end
 
 function Remotes.waitForAdminResetProgressRequestEvent(): RemoteEvent
     return waitForRemoteEvent(Remotes.ADMIN_RESET_PROGRESS_REQUEST_EVENT)
+end
+
+function Remotes.getOrCreateAdminGainRankRequestEvent(): RemoteEvent
+    return getOrCreateRemoteEvent(Remotes.ADMIN_GAIN_RANK_REQUEST_EVENT)
+end
+
+function Remotes.waitForAdminGainRankRequestEvent(): RemoteEvent
+    return waitForRemoteEvent(Remotes.ADMIN_GAIN_RANK_REQUEST_EVENT)
 end
 
 function Remotes.getOrCreateAdminSkipLuckyChestTimerRequestEvent(): RemoteEvent
