@@ -14,6 +14,8 @@ export type RebirthConfig = {
 }
 
 local RebirthLogic = {}
+local LINEAR_GRANT_STEPS = 5
+local DIMINISHING_GRANT_POWER = 0.6
 
 local function clamp(value: number, minValue: number, maxValue: number): number
     return math.max(minValue, math.min(maxValue, value))
@@ -64,7 +66,12 @@ function RebirthLogic.getPreviewGrant(
         return 0
     end
 
-    local grant = math.floor(clampedScore / requirement)
+    local steps = clampedScore / requirement
+    local grant = math.floor(steps)
+    if steps > LINEAR_GRANT_STEPS then
+        grant = LINEAR_GRANT_STEPS
+            + math.floor((steps - LINEAR_GRANT_STEPS) ^ DIMINISHING_GRANT_POWER)
+    end
     if
         isInsideFinalAgeZone
         and RebirthLogic.isHourlyFinalZoneBonusActive(unixTimeSeconds, config.hourlyFinalZoneBonus)
