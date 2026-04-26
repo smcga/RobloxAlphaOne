@@ -51,3 +51,30 @@ runCase('skipLuckyChestTimer keeps already-ready chest timestamp unchanged', fun
     expectEqual(AdminLogic.skipLuckyChestTimer(0), 0, 'ready timestamp should remain unchanged')
     expectEqual(AdminLogic.skipLuckyChestTimer(-25), -25, 'past timestamp should remain unchanged')
 end)
+
+runCase('getNextRankScore moves score to next rank threshold', function()
+    local rankConfigs = {
+        { requiredScore = 0 },
+        { requiredScore = 100 },
+        { requiredScore = 300 },
+    }
+
+    expectEqual(
+        AdminLogic.getNextRankScore(120, rankConfigs),
+        300,
+        'score should jump to the next required threshold'
+    )
+end)
+
+runCase('getNextRankScore stays at score when already max rank', function()
+    local rankConfigs = {
+        { requiredScore = 0 },
+        { requiredScore = 100 },
+    }
+
+    expectEqual(
+        AdminLogic.getNextRankScore(140, rankConfigs),
+        140,
+        'max rank score should remain unchanged'
+    )
+end)

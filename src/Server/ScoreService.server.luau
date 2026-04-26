@@ -45,6 +45,7 @@ type PlayerScoreState = {
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
 local adminScoreMultiplyRequestEvent = Remotes.getOrCreateAdminScoreMultiplyRequestEvent()
 local adminResetProgressRequestEvent = Remotes.getOrCreateAdminResetProgressRequestEvent()
+local adminGainRankRequestEvent = Remotes.getOrCreateAdminGainRankRequestEvent()
 local adminSkipLuckyChestTimerRequestEvent =
     Remotes.getOrCreateAdminSkipLuckyChestTimerRequestEvent()
 local adminAddRewardRequestEvent = Remotes.getOrCreateAdminAddRewardRequestEvent()
@@ -950,7 +951,17 @@ local function pushIsAdmin(player: Player, isAdmin: boolean)
 end
 
 local function isPlayerAdmin(player: Player): boolean
-    return game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId
+    if game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId then
+        return true
+    end
+
+    for _, adminUsername in ipairs(Constants.ADMIN_USERNAMES) do
+        if string.lower(player.Name) == string.lower(adminUsername) then
+            return true
+        end
+    end
+
+    return false
 end
 
 local function loadCustomRewardCatalog()
@@ -1233,6 +1244,29 @@ adminResetProgressRequestEvent.OnServerEvent:Connect(function(player: Player)
 
     local progressionState = state.progressionState
     progressionState.score, progressionState.rebirths = AdminLogic.resetScoreAndRebirths()
+    refreshProgressionHighWatermarks(progressionState)
+
+    pushScore(player, progressionState.score, progressionState.rebirths)
+    updateRankTitle(player, progressionState.score)
+    tryUpdateGlobalTopScore(player, progressionState.highestScoreAchieved)
+    updateRankAura(player, state)
+    markDirty(state)
+    savePlayerState(player, false)
+end)
+
+adminGainRankRequestEvent.OnServerEvent:Connect(function(player: Player)
+    if not isPlayerAdmin(player) then
+        return
+    end
+
+    local state = playerStates[player]
+    if not state then
+        return
+    end
+
+    local progressionState = state.progressionState
+    progressionState.score =
+        AdminLogic.getNextRankScore(progressionState.score, Constants.RANK_CONFIGS)
     refreshProgressionHighWatermarks(progressionState)
 
     pushScore(player, progressionState.score, progressionState.rebirths)

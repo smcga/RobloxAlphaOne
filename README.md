@@ -16,7 +16,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Displays each player's current rank title above their character's head so other players can see progression at a glance.
 - Grants every rank a unique aura style that ramps up in spectacle with stronger glow, denser particles, animated pulsing light, and scale growth as players climb toward max rank.
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
-- Shows an owner-only admin panel with buttons to multiply current score (`2x`, `10x`), skip the Lucky Chest cooldown timer, and a guarded reset button that requires a second confirmation click before wiping your own score/rebirths.
+- Shows an owner/allowlisted admin panel with buttons to multiply current score (`2x`, `10x`), gain `+1 rank`, skip the Lucky Chest cooldown timer, and a guarded reset button that requires a second confirmation click before wiping your own score/rebirths.
 - Extends the owner-only admin panel with an **Add Reward** modal to add Lucky Chest hat/vehicle rewards from Roblox Creator Store asset links or raw asset IDs, persisted in a global server-side reward catalog.
 - Adds a server-authoritative Rewards inventory panel where players can view unlocked hats/mounts, equip one hat, equip one vehicle mount, and unequip either slot.
 - Equips Lucky Chest hats by loading Creator Store assets server-side (with script descendants removed) and attaching safe visuals to the avatar; current temporary forced hat asset is `Classic Cowboy hat` (`17075928250`) for all hat rewards.
@@ -153,7 +153,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - A giant floating screen above the rebirth area shows the current all-time top scorer name and best-ever score across all players.
    - Entering a still-locked age zone flings you away, then kills you, while preserving your existing score/rebirth totals.
    - Locked-zone deaths play a shared SFX for everyone and spawn flying `Nope!` text particles around the punished player.
-   - If you're the game owner, admin panel buttons can multiply your current score by `2x` or `10x`, skip your Lucky Chest cooldown timer, and can reset your own score/rebirths after a two-click confirmation prompt.
+   - If you're the game owner or an allowlisted admin (currently `CookieBearJeff`), admin panel buttons can multiply your current score by `2x` or `10x`, grant `+1 rank`, skip your Lucky Chest cooldown timer, and can reset your own score/rebirths after a two-click confirmation prompt.
    - If you're the game owner, admin panel also includes **Add Reward** for Lucky Chest hats/vehicle mounts (type + asset link/ID + name + rarity); successful submissions persist and become available to all players' Lucky Chest spin pools.
    - The **Rewards** panel (near Lucky Chest) lists unlocked hats/mounts and supports server-validated equip/unequip actions with status messages.
    - Every 5 minutes, opening the Lucky Chest plays a two-stage spin animation and grants one rarity-based reward (score, rebirths, cosmetic unlock, mount unlock, or 10x score for 60 seconds).

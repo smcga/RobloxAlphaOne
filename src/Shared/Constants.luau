@@ -108,6 +108,9 @@ local Constants = {
         2,
         10,
     },
+    ADMIN_USERNAMES = {
+        'CookieBearJeff',
+    },
 
     SCORE_DATASTORE_NAME = 'PlayerScoreDataV2',
     GLOBAL_TOP_SCORE_DATASTORE_NAME = 'GlobalTopScoreV1',
