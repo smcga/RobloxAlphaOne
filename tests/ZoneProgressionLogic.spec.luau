@@ -129,7 +129,7 @@ runCase('rebirth multiplier continues scaling with higher rebirth counts', funct
         },
     })
 
-    expectEqual(result.state.score, 71, '10 rebirths should apply a 71x multiplier')
+    expectEqual(result.state.score, 30, '10 rebirths should be capped to avoid late-age skips')
 end)
 
 runCase('rebirth multiplier still applies at or above highest score achieved', function()
@@ -248,8 +248,8 @@ runCase(
         expectEqual(rebirthed.state.score, 0, 'rebirth should reset score to zero immediately')
         expectEqual(
             rebirthed.state.rebirths,
-            155012,
-            'rebirth should include one rebirth per 1000 score'
+            1317,
+            'rebirth should apply diminishing rebirth grant at extreme score values'
         )
         expectEqual(
             afterFirstZoneTick.state.rebirths,
@@ -258,8 +258,8 @@ runCase(
         )
         expectEqual(
             afterFirstZoneTick.state.score,
-            1085085,
-            'next zone tick should restart from zero and use rebirth multiplier, not restore prior score'
+            30,
+            'next zone tick should restart from zero and apply capped catch-up multiplier'
         )
     end
 )

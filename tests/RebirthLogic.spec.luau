@@ -51,9 +51,16 @@ runCase('preview grant gives one rebirth per 1000 score spent', function()
     expectEqual(grant, 3, '3600 score should grant three rebirths at 1000 each')
 end)
 
-runCase('high score rebirth grant scales linearly with score spent', function()
+runCase('rebirth grant uses diminishing returns at very high score', function()
     local grant = RebirthLogic.getPreviewGrant(165000, 0, false, 0, config)
-    expectEqual(grant, 165, '165000 score should grant 165 rebirths at 1000 each')
+    expectEqual(grant, 26, '165000 score should be dampened by diminishing returns')
+end)
+
+runCase('diminishing returns start after first five requirement steps', function()
+    local grant = RebirthLogic.getPreviewGrant(5000, 0, false, 0, config)
+    local nextGrant = RebirthLogic.getPreviewGrant(6000, 0, false, 0, config)
+    expectEqual(grant, 5, '5000 score should keep linear grant for early rebirths')
+    expectEqual(nextGrant, 6, '6000 score should begin diminishing branch smoothly')
 end)
 
 runCase('hourly bonus only applies inside the final age zone', function()

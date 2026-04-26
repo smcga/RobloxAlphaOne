@@ -70,7 +70,18 @@ function ZoneProgressionLogic.tick(
     local postRecordRebirthMultiplier = input.postRecordRebirthMultiplier
         or ProgressionBalance.POST_RECORD_REBIRTH_MULTIPLIER
 
-    local catchUpMultiplier = math.max(1, 1 + state.rebirths * catchUpPerRebirth)
+    local catchUpMultiplier = ProgressionBalance.getCatchUpMultiplier(
+        state.score,
+        state.highestScoreAchieved,
+        state.rebirths,
+        input.maxCatchUpMultiplier
+    )
+    if catchUpPerRebirth ~= ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH then
+        catchUpMultiplier = math.max(1, 1 + state.rebirths * catchUpPerRebirth)
+        if input.maxCatchUpMultiplier ~= nil then
+            catchUpMultiplier = math.min(catchUpMultiplier, math.max(input.maxCatchUpMultiplier, 1))
+        end
+    end
 
     local scoreMultiplier = catchUpMultiplier
         * (input.bonusScoreMultiplier or 1)
