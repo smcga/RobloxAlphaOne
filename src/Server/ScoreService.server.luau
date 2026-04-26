@@ -15,6 +15,7 @@ local LuckyChestLogic = require(Shared:WaitForChild('LuckyChestLogic'))
 local GlobalTopScoreLogic = require(Shared:WaitForChild('GlobalTopScoreLogic'))
 local ProfileDataLogic = require(Shared:WaitForChild('ProfileDataLogic'))
 local RankAuraLogic = require(Shared:WaitForChild('RankAuraLogic'))
+local RankCelebrationLogic = require(Shared:WaitForChild('RankCelebrationLogic'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
 local RebirthLogic = require(Shared:WaitForChild('RebirthLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
@@ -28,6 +29,7 @@ type ZoneProgressionState = ZoneProgressionLogic.ZoneProgressionState
 type ProfileData = ProfileDataLogic.ProfileData
 type AdminReward = RewardCatalogLogic.AdminReward
 type TopScoreRecord = GlobalTopScoreLogic.TopScoreRecord
+type RankUpEvent = RankCelebrationLogic.RankUpEvent
 
 type PlayerScoreState = {
     progressionState: ZoneProgressionState,
@@ -40,6 +42,7 @@ type PlayerScoreState = {
     lastLockedZonePenaltyClock: number?,
     equippedMountInstance: Model?,
     storedWalkSpeed: number?,
+    lastHasActiveScoringZone: boolean,
 }
 
 local scoreUpdatedEvent = Remotes.getOrCreateScoreUpdatedEvent()
@@ -66,8 +69,11 @@ local scoreStore = DataStoreService:GetDataStore(Constants.SCORE_DATASTORE_NAME)
 local globalTopScoreStore = DataStoreService:GetDataStore(Constants.GLOBAL_TOP_SCORE_DATASTORE_NAME)
 local customRewardCatalogStore =
     DataStoreService:GetDataStore(Constants.CUSTOM_REWARD_CATALOG_DATASTORE_NAME)
+local globalRankReachStore =
+    DataStoreService:GetDataStore(Constants.GLOBAL_RANK_REACH_DATASTORE_NAME)
 local customRewards: { AdminReward } = {}
 local globalTopScoreRecord: TopScoreRecord = GlobalTopScoreLogic.normalizeRecord(nil)
+local globalRankReachCounts: { [number]: number } = {}
 local playerMountsFolder = workspace:FindFirstChild('PlayerMounts')
 if not playerMountsFolder then
     playerMountsFolder = Instance.new('Folder')
@@ -83,6 +89,8 @@ end
 local assetTemplateCache: { [number]: Instance } = {}
 local assetCacheOrder: { number } = {}
 local assetFailureById: { [number]: number } = {}
+local globalTopScoreUpdateInFlightByUserId: { [number]: boolean } = {}
+local queuedTopScoreByUserId: { [number]: number } = {}
 local forcedAssetOverrides: EquipmentLogic.ForcedAssetOverrides = {
     hatAssetId = Constants.FORCED_HAT_ASSET_ID,
     vehicleMountAssetId = Constants.FORCED_MOUNT_ASSET_ID,
@@ -588,8 +596,103 @@ local function equipMountVisual(
     return true, 'Vehicle mount equipped.'
 end
 
-local function pushScore(player: Player, score: number, rebirths: number)
-    scoreUpdatedEvent:FireClient(player, score, rebirths)
+local function pushScore(
+    player: Player,
+    score: number,
+    rebirths: number,
+    hasActiveScoringZone: boolean?,
+    rankUpEvents: { RankUpEvent }?
+)
+    scoreUpdatedEvent:FireClient(
+        player,
+        score,
+        rebirths,
+        hasActiveScoringZone == true,
+        rankUpEvents
+    )
+end
+
+local function getGlobalRankReachDataStoreKey(rankIndex: number): string
+    return string.format('%s%s', Constants.GLOBAL_RANK_REACH_KEY_PREFIX, tostring(rankIndex))
+end
+
+local function containsRankIndex(rankIndices: { number }, rankIndex: number): boolean
+    for _, value in ipairs(rankIndices) do
+        if value == rankIndex then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function incrementGlobalRankReachCount(rankIndex: number): number
+    local dataStoreKey = getGlobalRankReachDataStoreKey(rankIndex)
+    local success, result = pcall(function()
+        return globalRankReachStore:UpdateAsync(dataStoreKey, function(oldValue)
+            local previous = if type(oldValue) == 'number' then oldValue else 0
+            return math.max(0, math.floor(previous)) + 1
+        end)
+    end)
+
+    if not success then
+        warn(
+            string.format(
+                'Failed to increment global rank reach count for rank %d: %s',
+                rankIndex,
+                tostring(result)
+            )
+        )
+        local fallbackCount = globalRankReachCounts[rankIndex] or 0
+        return math.max(1, fallbackCount)
+    end
+
+    local count = if type(result) == 'number' then math.max(0, math.floor(result)) else 0
+    globalRankReachCounts[rankIndex] = count
+    return count
+end
+
+local function getKnownGlobalRankReachCount(rankIndex: number): number
+    return globalRankReachCounts[rankIndex] or 0
+end
+
+local function buildRankUpEvents(
+    state: PlayerScoreState,
+    previousRankIndex: number,
+    nextRankIndex: number
+): { RankUpEvent }
+    local events = {}
+    local newRankIndices = RankCelebrationLogic.getNewRankIndices(previousRankIndex, nextRankIndex)
+    local totalRanks = #Constants.RANK_CONFIGS
+
+    for _, rankIndex in ipairs(newRankIndices) do
+        if rankIndex >= 1 and rankIndex <= totalRanks then
+            local rankConfig = Constants.RANK_CONFIGS[rankIndex]
+            local previousTimesReached = state.profileData.rankReachCounts[rankIndex] or 0
+            local newTimesReached = previousTimesReached + 1
+            state.profileData.rankReachCounts[rankIndex] = newTimesReached
+
+            local hasContributedToGlobalCount =
+                containsRankIndex(state.profileData.globallyCountedRankIndices, rankIndex)
+            local globalPlayersReached = getKnownGlobalRankReachCount(rankIndex)
+
+            if not hasContributedToGlobalCount then
+                globalPlayersReached = incrementGlobalRankReachCount(rankIndex)
+                table.insert(state.profileData.globallyCountedRankIndices, rankIndex)
+            end
+
+            events[#events + 1] = RankCelebrationLogic.buildRankUpEvent(
+                rankIndex,
+                rankConfig.name,
+                rankConfig.description or '',
+                newTimesReached,
+                globalPlayersReached,
+                previousTimesReached == 0
+            )
+        end
+    end
+
+    return events
 end
 
 local REBIRTH_CONFIG: RebirthLogic.RebirthConfig = {
@@ -688,6 +791,34 @@ local function tryUpdateGlobalTopScore(player: Player, score: number)
 
     globalTopScoreRecord = GlobalTopScoreLogic.normalizeRecord(result)
     refreshGlobalTopScoreScreen()
+end
+
+local function requestGlobalTopScoreUpdate(player: Player, score: number)
+    local userId = player.UserId
+    local queuedScore = queuedTopScoreByUserId[userId]
+    if queuedScore == nil or score > queuedScore then
+        queuedTopScoreByUserId[userId] = score
+    end
+
+    if globalTopScoreUpdateInFlightByUserId[userId] then
+        return
+    end
+
+    globalTopScoreUpdateInFlightByUserId[userId] = true
+
+    task.spawn(function()
+        while true do
+            local nextScore = queuedTopScoreByUserId[userId]
+            if nextScore == nil then
+                break
+            end
+
+            queuedTopScoreByUserId[userId] = nil
+            tryUpdateGlobalTopScore(player, nextScore)
+        end
+
+        globalTopScoreUpdateInFlightByUserId[userId] = nil
+    end)
 end
 
 local function refreshProgressionHighWatermarks(progressionState: ZoneProgressionState)
@@ -1048,6 +1179,7 @@ local function createPlayerState(profileData: ProfileData): PlayerScoreState
         lastLockedZonePenaltyClock = nil,
         equippedMountInstance = nil,
         storedWalkSpeed = nil,
+        lastHasActiveScoringZone = false,
     }
 end
 
@@ -1160,9 +1292,9 @@ end
 local function initializePlayerState(player: Player)
     local state = loadPlayerState(player)
     playerStates[player] = state
-    tryUpdateGlobalTopScore(player, state.progressionState.highestScoreAchieved)
+    requestGlobalTopScoreUpdate(player, state.progressionState.highestScoreAchieved)
 
-    pushScore(player, state.progressionState.score, state.progressionState.rebirths)
+    pushScore(player, state.progressionState.score, state.progressionState.rebirths, false)
     pushLuckyChestStatus(player, state.profileData)
     pushEquipmentState(player, state)
     updateRankTitle(player, state.progressionState.score)
@@ -1175,7 +1307,8 @@ local function initializePlayerState(player: Player)
             pushScore(
                 player,
                 currentState.progressionState.score,
-                currentState.progressionState.rebirths
+                currentState.progressionState.rebirths,
+                false
             )
             pushLuckyChestStatus(player, currentState.profileData)
             pushEquipmentState(player, currentState)
@@ -1210,12 +1343,17 @@ adminScoreMultiplyRequestEvent.OnServerEvent:Connect(function(player: Player, mu
     end
 
     local progressionState = state.progressionState
+    local previousRankIndex =
+        RankProgressionLogic.getCurrentRankIndex(progressionState.score, Constants.RANK_CONFIGS)
     progressionState.score = AdminLogic.applyScoreMultiplier(progressionState.score, multiplier)
     refreshProgressionHighWatermarks(progressionState)
+    local nextRankIndex =
+        RankProgressionLogic.getCurrentRankIndex(progressionState.score, Constants.RANK_CONFIGS)
+    local rankUpEvents = buildRankUpEvents(state, previousRankIndex, nextRankIndex)
 
-    pushScore(player, progressionState.score, progressionState.rebirths)
+    pushScore(player, progressionState.score, progressionState.rebirths, false, rankUpEvents)
     updateRankTitle(player, progressionState.score)
-    tryUpdateGlobalTopScore(player, progressionState.highestScoreAchieved)
+    requestGlobalTopScoreUpdate(player, progressionState.highestScoreAchieved)
     updateRankAura(player, state)
     markDirty(state)
     savePlayerState(player, false)
@@ -1232,12 +1370,17 @@ adminResetProgressRequestEvent.OnServerEvent:Connect(function(player: Player)
     end
 
     local progressionState = state.progressionState
+    local previousRankIndex =
+        RankProgressionLogic.getCurrentRankIndex(progressionState.score, Constants.RANK_CONFIGS)
     progressionState.score, progressionState.rebirths = AdminLogic.resetScoreAndRebirths()
     refreshProgressionHighWatermarks(progressionState)
+    local nextRankIndex =
+        RankProgressionLogic.getCurrentRankIndex(progressionState.score, Constants.RANK_CONFIGS)
+    local rankUpEvents = buildRankUpEvents(state, previousRankIndex, nextRankIndex)
 
-    pushScore(player, progressionState.score, progressionState.rebirths)
+    pushScore(player, progressionState.score, progressionState.rebirths, false, rankUpEvents)
     updateRankTitle(player, progressionState.score)
-    tryUpdateGlobalTopScore(player, progressionState.highestScoreAchieved)
+    requestGlobalTopScoreUpdate(player, progressionState.highestScoreAchieved)
     updateRankAura(player, state)
     markDirty(state)
     savePlayerState(player, false)
@@ -1327,13 +1470,28 @@ luckyChestOpenRequestEvent.OnServerEvent:Connect(function(player: Player)
     end
 
     state.profileData = spinResult.profileData
+    local previousRankIndex = RankProgressionLogic.getCurrentRankIndex(
+        state.progressionState.score,
+        Constants.RANK_CONFIGS
+    )
     state.progressionState.score = spinResult.score
     state.progressionState.rebirths = spinResult.rebirths
     refreshProgressionHighWatermarks(state.progressionState)
+    local nextRankIndex = RankProgressionLogic.getCurrentRankIndex(
+        state.progressionState.score,
+        Constants.RANK_CONFIGS
+    )
+    local rankUpEvents = buildRankUpEvents(state, previousRankIndex, nextRankIndex)
 
-    pushScore(player, state.progressionState.score, state.progressionState.rebirths)
+    pushScore(
+        player,
+        state.progressionState.score,
+        state.progressionState.rebirths,
+        false,
+        rankUpEvents
+    )
     updateRankTitle(player, state.progressionState.score)
-    tryUpdateGlobalTopScore(player, state.progressionState.highestScoreAchieved)
+    requestGlobalTopScoreUpdate(player, state.progressionState.highestScoreAchieved)
     pushLuckyChestStatus(player, state.profileData)
     pushEquipmentState(player, state)
 
@@ -1454,6 +1612,8 @@ Players.PlayerRemoving:Connect(function(player)
     if state then
         removeEquippedMountVisual(state)
     end
+    queuedTopScoreByUserId[player.UserId] = nil
+    globalTopScoreUpdateInFlightByUserId[player.UserId] = nil
     savePlayerState(player, true)
     playerStates[player] = nil
 end)
@@ -1536,6 +1696,8 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             nowUnixTime = os.time(),
             isInsideFinalAgeZone = isInsideAgeZones[#Constants.AGE_ZONE_CONFIGS] == true,
         })
+        local scoringZoneChanged = tickResult.hasActiveScoringZone ~= state.lastHasActiveScoringZone
+        state.lastHasActiveScoringZone = tickResult.hasActiveScoringZone
 
         local previousState = state.progressionState
         state.progressionState = tickResult.state
@@ -1544,11 +1706,35 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             tickResult.state.score ~= previousState.score
             or tickResult.state.rebirths ~= previousState.rebirths
         then
-            pushScore(player, tickResult.state.score, tickResult.state.rebirths)
-            updateRankTitle(player, tickResult.state.score)
-            tryUpdateGlobalTopScore(player, tickResult.state.highestScoreAchieved)
+            local previousScore = state.progressionState.score
+            state.progressionState = tickResult.state
+
+            local previousRankIndex =
+                RankProgressionLogic.getCurrentRankIndex(previousScore, Constants.RANK_CONFIGS)
+            local nextRankIndex = RankProgressionLogic.getCurrentRankIndex(
+                tickResult.state.score,
+                Constants.RANK_CONFIGS
+            )
+            local rankUpEvents = buildRankUpEvents(state, previousRankIndex, nextRankIndex)
+
+            pushScore(
+                player,
+                state.progressionState.score,
+                state.progressionState.rebirths,
+                tickResult.hasActiveScoringZone,
+                rankUpEvents
+            )
+            updateRankTitle(player, state.progressionState.score)
+            requestGlobalTopScoreUpdate(player, state.progressionState.highestScoreAchieved)
             markDirty(state)
             savePlayerState(player, false)
+        elseif scoringZoneChanged then
+            pushScore(
+                player,
+                state.progressionState.score,
+                state.progressionState.rebirths,
+                tickResult.hasActiveScoringZone
+            )
         end
 
         updateRankAura(player, state)

@@ -1,6 +1,8 @@
 local Players = game:GetService('Players')
 local ReplicatedStorage = game:GetService('ReplicatedStorage')
 local TweenService = game:GetService('TweenService')
+local Lighting = game:GetService('Lighting')
+local RunService = game:GetService('RunService')
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild('PlayerGui')
@@ -14,6 +16,7 @@ local RebirthLogic = require(Shared:WaitForChild('RebirthLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ScorePopupLogic = require(Shared:WaitForChild('ScorePopupLogic'))
 local ZoneUnlockUiLogic = require(Shared:WaitForChild('ZoneUnlockUiLogic'))
+local ZoneSkyLogic = require(Shared:WaitForChild('ZoneSkyLogic'))
 
 local RARITY_COLORS = {
     green = Color3.fromRGB(126, 211, 122),
@@ -51,10 +54,17 @@ rebirthsLabel.Position = UDim2.fromOffset(16, 72)
 rebirthsLabel.Text = 'Rebirths: 0'
 rebirthsLabel.Parent = screenGui
 
+local scoringStatusLabel = scoreLabel:Clone()
+scoringStatusLabel.Name = 'ScoringStatusLabel'
+scoringStatusLabel.Position = UDim2.fromOffset(16, 128)
+scoringStatusLabel.TextSize = 20
+scoringStatusLabel.Text = 'Scoring: idle'
+scoringStatusLabel.Parent = screenGui
+
 local nextUnlockLabel = scoreLabel:Clone()
 nextUnlockLabel.Name = 'NextUnlockLabel'
 nextUnlockLabel.Size = UDim2.fromOffset(460, 48)
-nextUnlockLabel.Position = UDim2.fromOffset(16, 128)
+nextUnlockLabel.Position = UDim2.fromOffset(16, 184)
 nextUnlockLabel.TextSize = 18
 nextUnlockLabel.Text = 'Next: Age of Brass at 600 (600 to go)'
 nextUnlockLabel.Parent = screenGui
@@ -62,7 +72,7 @@ nextUnlockLabel.Parent = screenGui
 local rankPanel = Instance.new('Frame')
 rankPanel.Name = 'RankPanel'
 rankPanel.Size = UDim2.fromOffset(460, 88)
-rankPanel.Position = UDim2.fromOffset(16, 184)
+rankPanel.Position = UDim2.fromOffset(16, 240)
 rankPanel.BackgroundTransparency = 0.3
 rankPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 rankPanel.Parent = screenGui
@@ -112,6 +122,69 @@ rankProgressTextLabel.Font = Enum.Font.Gotham
 rankProgressTextLabel.TextSize = 14
 rankProgressTextLabel.Text = '0 / 1,000 to Bead Keeper'
 rankProgressTextLabel.Parent = rankPanel
+
+local rankUpOverlay = Instance.new('Frame')
+rankUpOverlay.Name = 'RankUpOverlay'
+rankUpOverlay.Size = UDim2.fromScale(1, 1)
+rankUpOverlay.BackgroundTransparency = 1
+rankUpOverlay.Visible = false
+rankUpOverlay.ZIndex = 40
+rankUpOverlay.Parent = screenGui
+
+local rankUpCard = Instance.new('Frame')
+rankUpCard.Name = 'RankUpCard'
+rankUpCard.Size = UDim2.fromOffset(620, 270)
+rankUpCard.AnchorPoint = Vector2.new(0.5, 0.5)
+rankUpCard.Position = UDim2.fromScale(0.5, 0.5)
+rankUpCard.BackgroundColor3 = Color3.fromRGB(18, 22, 34)
+rankUpCard.BackgroundTransparency = 0.12
+rankUpCard.ZIndex = 41
+rankUpCard.Parent = rankUpOverlay
+corner:Clone().Parent = rankUpCard
+
+local rankUpCardScale = Instance.new('UIScale')
+rankUpCardScale.Scale = 0.7
+rankUpCardScale.Parent = rankUpCard
+
+local rankUpTitleLabel = Instance.new('TextLabel')
+rankUpTitleLabel.Size = UDim2.fromOffset(584, 42)
+rankUpTitleLabel.Position = UDim2.fromOffset(18, 16)
+rankUpTitleLabel.BackgroundTransparency = 1
+rankUpTitleLabel.Text = 'RANK UP!'
+rankUpTitleLabel.TextColor3 = Color3.fromRGB(255, 226, 129)
+rankUpTitleLabel.Font = Enum.Font.GothamBlack
+rankUpTitleLabel.TextScaled = true
+rankUpTitleLabel.ZIndex = 42
+rankUpTitleLabel.Parent = rankUpCard
+
+local rankUpNameLabel = rankUpTitleLabel:Clone()
+rankUpNameLabel.Position = UDim2.fromOffset(18, 62)
+rankUpNameLabel.Text = 'Pebble Counter'
+rankUpNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+rankUpNameLabel.Parent = rankUpCard
+
+local rankUpDescriptionLabel = Instance.new('TextLabel')
+rankUpDescriptionLabel.Size = UDim2.fromOffset(584, 62)
+rankUpDescriptionLabel.Position = UDim2.fromOffset(18, 112)
+rankUpDescriptionLabel.BackgroundTransparency = 1
+rankUpDescriptionLabel.Text = ''
+rankUpDescriptionLabel.TextColor3 = Color3.fromRGB(210, 220, 248)
+rankUpDescriptionLabel.Font = Enum.Font.Gotham
+rankUpDescriptionLabel.TextSize = 20
+rankUpDescriptionLabel.TextWrapped = true
+rankUpDescriptionLabel.ZIndex = 42
+rankUpDescriptionLabel.Parent = rankUpCard
+
+local rankUpStatsLabel = Instance.new('TextLabel')
+rankUpStatsLabel.Size = UDim2.fromOffset(584, 56)
+rankUpStatsLabel.Position = UDim2.fromOffset(18, 194)
+rankUpStatsLabel.BackgroundTransparency = 1
+rankUpStatsLabel.TextColor3 = Color3.fromRGB(184, 255, 212)
+rankUpStatsLabel.Font = Enum.Font.GothamBold
+rankUpStatsLabel.TextSize = 18
+rankUpStatsLabel.TextWrapped = true
+rankUpStatsLabel.ZIndex = 42
+rankUpStatsLabel.Parent = rankUpCard
 
 local luckyChestPanel = Instance.new('Frame')
 luckyChestPanel.Name = 'LuckyChestPanel'
@@ -303,10 +376,69 @@ chestRewardLabel.Parent = chestCenterPanel
 local nextLuckyChestOpenAt = 0
 local isChestSpinPlaying = false
 local previousScore: number? = nil
+local rankUpQueue = {}
+local isRankUpAnimating = false
 local availableHats = {}
 local availableVehicleMounts = {}
 local equippedHatId: string? = nil
 local equippedVehicleMountId: string? = nil
+
+local SKY_TINT_EFFECT_NAME = 'ZoneSkyTintEffect'
+local SKY_TINT_STRENGTH = 0.42
+local SKY_TINT_UPDATE_INTERVAL_SECONDS = 0.15
+local SKY_NEUTRAL_TINT = Color3.fromRGB(255, 255, 255)
+
+local skyTintEffect = Lighting:FindFirstChild(SKY_TINT_EFFECT_NAME)
+if not skyTintEffect or not skyTintEffect:IsA('ColorCorrectionEffect') then
+    if skyTintEffect then
+        skyTintEffect:Destroy()
+    end
+
+    skyTintEffect = Instance.new('ColorCorrectionEffect')
+    skyTintEffect.Name = SKY_TINT_EFFECT_NAME
+    skyTintEffect.Parent = Lighting
+end
+
+skyTintEffect.Enabled = true
+skyTintEffect.TintColor = SKY_NEUTRAL_TINT
+
+local lastSkyZoneIndex: number? = nil
+local skyUpdateClockAccumulator = SKY_TINT_UPDATE_INTERVAL_SECONDS
+
+local function updateSkyTintFromCharacterPosition(character: Model?)
+    local rootPart = character and character:FindFirstChild('HumanoidRootPart')
+    if not rootPart or not rootPart:IsA('BasePart') then
+        if lastSkyZoneIndex ~= nil then
+            lastSkyZoneIndex = nil
+            skyTintEffect.TintColor = SKY_NEUTRAL_TINT
+        end
+        return
+    end
+
+    local zoneIndex =
+        ZoneSkyLogic.getCurrentZoneIndex(rootPart.Position, Constants.AGE_ZONE_CONFIGS)
+    if zoneIndex == lastSkyZoneIndex then
+        return
+    end
+
+    lastSkyZoneIndex = zoneIndex
+    skyTintEffect.TintColor = ZoneSkyLogic.getSkyTintColor(
+        zoneIndex,
+        Constants.AGE_ZONE_CONFIGS,
+        SKY_NEUTRAL_TINT,
+        SKY_TINT_STRENGTH
+    )
+end
+
+RunService.RenderStepped:Connect(function(deltaTime: number)
+    skyUpdateClockAccumulator += deltaTime
+    if skyUpdateClockAccumulator < SKY_TINT_UPDATE_INTERVAL_SECONDS then
+        return
+    end
+
+    skyUpdateClockAccumulator = 0
+    updateSkyTintFromCharacterPosition(player.Character)
+end)
 
 local function updateAgeZoneLabelVisibility(score: number)
     for _, zoneConfig in ipairs(Constants.AGE_ZONE_CONFIGS) do
@@ -401,6 +533,78 @@ local function setScoreAndRebirths(score: number, rebirths: number)
     end
 end
 
+local activeScoreParticleAttachment: Attachment? = nil
+local isScoringZoneActive = false
+
+local function destroyScoreParticleAttachment()
+    if activeScoreParticleAttachment then
+        activeScoreParticleAttachment:Destroy()
+        activeScoreParticleAttachment = nil
+    end
+end
+
+local function getHumanoidRootPart(character: Model?): BasePart?
+    if not character then
+        return nil
+    end
+
+    local rootPart = character:FindFirstChild('HumanoidRootPart')
+    if rootPart and rootPart:IsA('BasePart') then
+        return rootPart
+    end
+
+    return nil
+end
+
+local function ensureScoreParticleAttachment()
+    if activeScoreParticleAttachment then
+        return
+    end
+
+    local rootPart = getHumanoidRootPart(player.Character)
+    if not rootPart then
+        return
+    end
+
+    local attachment = Instance.new('Attachment')
+    attachment.Name = 'ScoreParticleAttachment'
+    attachment.Parent = rootPart
+
+    local emitter = Instance.new('ParticleEmitter')
+    emitter.Name = 'ScoreParticleEmitter'
+    emitter.Color = ColorSequence.new(Color3.fromRGB(255, 219, 92), Color3.fromRGB(255, 255, 255))
+    emitter.LightEmission = 0.7
+    emitter.Lifetime = NumberRange.new(0.4, 0.8)
+    emitter.Rate = 14
+    emitter.Speed = NumberRange.new(2, 4)
+    emitter.SpreadAngle = Vector2.new(20, 20)
+    emitter.RotSpeed = NumberRange.new(-90, 90)
+    emitter.Texture = 'rbxasset://textures/particles/sparkles_main.dds'
+    emitter.Parent = attachment
+
+    activeScoreParticleAttachment = attachment
+end
+
+local function setScoringZoneActive(hasActiveScoringZone: boolean)
+    isScoringZoneActive = hasActiveScoringZone
+    if isScoringZoneActive then
+        scoringStatusLabel.Text = 'Scoring: active'
+        scoringStatusLabel.TextColor3 = Color3.fromRGB(152, 255, 167)
+        ensureScoreParticleAttachment()
+    else
+        scoringStatusLabel.Text = 'Scoring: idle'
+        scoringStatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        destroyScoreParticleAttachment()
+    end
+end
+
+player.CharacterAdded:Connect(function()
+    destroyScoreParticleAttachment()
+    if isScoringZoneActive then
+        task.defer(ensureScoreParticleAttachment)
+    end
+end)
+
 local POPUP_WIDTH = 160
 local POPUP_HEIGHT = 60
 
@@ -446,6 +650,115 @@ local function showScoreIncreasePopup(increase: number)
     end)
 
     floatTween:Play()
+end
+
+local function playRankUpPopup(rankUpEvent)
+    rankUpNameLabel.Text = rankUpEvent.rankName or 'New Rank'
+    rankUpDescriptionLabel.Text = rankUpEvent.rankDescription or ''
+    rankUpStatsLabel.Text = string.format(
+        'Times reached: %s   •   Players ever reached: %s',
+        NumberFormat.formatCompact(rankUpEvent.timesReached or 1),
+        NumberFormat.formatCompact(rankUpEvent.globalPlayersReached or 0)
+    )
+
+    rankUpOverlay.Visible = true
+    rankUpCardScale.Scale = 0.7
+    rankUpCard.BackgroundTransparency = 0.4
+    rankUpCard.Position = UDim2.fromScale(0.5, 0.56)
+    rankUpTitleLabel.TextTransparency = 1
+    rankUpNameLabel.TextTransparency = 1
+    rankUpDescriptionLabel.TextTransparency = 1
+    rankUpStatsLabel.TextTransparency = 1
+
+    local introTween = TweenService:Create(
+        rankUpCard,
+        TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        {
+            BackgroundTransparency = 0.12,
+            Position = UDim2.fromScale(0.5, 0.5),
+        }
+    )
+    TweenService:Create(
+        rankUpCardScale,
+        TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        { Scale = 1 }
+    ):Play()
+    TweenService:Create(
+        rankUpTitleLabel,
+        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { TextTransparency = 0 }
+    ):Play()
+    TweenService:Create(
+        rankUpNameLabel,
+        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { TextTransparency = 0 }
+    ):Play()
+    TweenService:Create(
+        rankUpDescriptionLabel,
+        TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { TextTransparency = 0 }
+    ):Play()
+    TweenService:Create(
+        rankUpStatsLabel,
+        TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { TextTransparency = 0 }
+    ):Play()
+    introTween:Play()
+    introTween.Completed:Wait()
+
+    task.wait(math.max(rankUpEvent.popupDurationSeconds or 3, 0))
+
+    local outroTween = TweenService:Create(
+        rankUpCard,
+        TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        {
+            BackgroundTransparency = 0.95,
+            Position = UDim2.fromScale(0.5, 0.44),
+        }
+    )
+    TweenService:Create(
+        rankUpCardScale,
+        TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        { Scale = 0.55 }
+    ):Play()
+    TweenService:Create(
+        rankUpTitleLabel,
+        TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        { TextTransparency = 1 }
+    ):Play()
+    TweenService:Create(
+        rankUpNameLabel,
+        TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        { TextTransparency = 1 }
+    ):Play()
+    TweenService:Create(
+        rankUpDescriptionLabel,
+        TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        { TextTransparency = 1 }
+    ):Play()
+    TweenService:Create(
+        rankUpStatsLabel,
+        TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+        { TextTransparency = 1 }
+    ):Play()
+    outroTween:Play()
+    outroTween.Completed:Wait()
+
+    rankUpOverlay.Visible = false
+end
+
+local function processRankUpQueue()
+    if isRankUpAnimating then
+        return
+    end
+
+    isRankUpAnimating = true
+    while #rankUpQueue > 0 do
+        local rankUpEvent = table.remove(rankUpQueue, 1)
+        playRankUpPopup(rankUpEvent)
+        task.wait(0.06)
+    end
+    isRankUpAnimating = false
 end
 
 local function formatCountdown(seconds: number): string
@@ -1061,15 +1374,27 @@ luckyChestButton.Activated:Connect(function()
     luckyChestOpenRequestEvent:FireServer()
 end)
 
-scoreUpdatedEvent.OnClientEvent:Connect(function(score: number, rebirths: number)
-    local increase = ScorePopupLogic.getPositiveIncrease(previousScore, score)
-    if increase then
-        showScoreIncreasePopup(increase)
-    end
+scoreUpdatedEvent.OnClientEvent:Connect(
+    function(score: number, rebirths: number, hasActiveScoringZone: boolean?, rankUpEvents)
+        local increase = ScorePopupLogic.getPositiveIncrease(previousScore, score)
+        if increase then
+            showScoreIncreasePopup(increase)
+        end
 
-    previousScore = score
-    setScoreAndRebirths(score, rebirths)
-end)
+        previousScore = score
+        setScoreAndRebirths(score, rebirths)
+        setScoringZoneActive(hasActiveScoringZone == true)
+
+        if typeof(rankUpEvents) == 'table' then
+            for _, rankUpEvent in ipairs(rankUpEvents) do
+                rankUpQueue[#rankUpQueue + 1] = rankUpEvent
+            end
+            if #rankUpQueue > 0 then
+                task.spawn(processRankUpQueue)
+            end
+        end
+    end
+)
 
 adminStateUpdatedEvent.OnClientEvent:Connect(function(isAdmin: boolean)
     adminPanel.Visible = isAdmin
