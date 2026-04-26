@@ -33,6 +33,17 @@ runCase('normalize returns zeroed state when persisted data is missing', functio
     expectEqual(result.nextLuckyChestOpenAt, 0, 'missing data should default chest cooldown')
     expectEqual(result.scoreBoostExpiresAt, 0, 'missing data should default boost expiration')
     expectEqual(#result.unlockedHats, 0, 'missing data should default hats to empty')
+    expectEqual(
+        #result.rankReachCounts,
+        ProgressionBalance.TOTAL_RANKS,
+        'rank counts should prefill'
+    )
+    expectEqual(result.rankReachCounts[1], 0, 'rank counts should default to zero')
+    expectEqual(
+        #result.globallyCountedRankIndices,
+        0,
+        'global counted rank list should default to empty'
+    )
     expectEqual(result.equippedHatId, nil, 'missing data should default equipped hat to nil')
 end)
 
@@ -102,6 +113,8 @@ runCase('normalize floors decimal values from persisted data', function()
         unlockedVehicleMounts = { 'mount_one' },
         equippedHatId = 'hat_two',
         equippedVehicleMountId = 'mount_one',
+        rankReachCounts = { [1] = 2.9, [2] = 0 / 0, [3] = -1 },
+        globallyCountedRankIndices = { 1, 1, 2.4, -9, 999 },
     })
 
     expectEqual(result.score, 15, 'score should be stored as a whole number')
@@ -116,6 +129,14 @@ runCase('normalize floors decimal values from persisted data', function()
         result.equippedVehicleMountId or '',
         'mount_one',
         'equipped mount should be preserved'
+    )
+    expectEqual(result.rankReachCounts[1], 2, 'rank reach counts should be floored')
+    expectEqual(result.rankReachCounts[2], 0, 'invalid rank count should sanitize to zero')
+    expectEqual(result.rankReachCounts[3], 0, 'negative rank count should sanitize to zero')
+    expectEqual(
+        #result.globallyCountedRankIndices,
+        2,
+        'global counted ranks should dedupe and filter'
     )
 end)
 
@@ -133,6 +154,8 @@ runCase('toStoredValue serializes sanitized highest achieved values', function()
         unlockedVehicleMounts = { 'mount_alpha' },
         equippedHatId = 'hat_beta',
         equippedVehicleMountId = 'mount_alpha',
+        rankReachCounts = { [1] = 3.5, [10] = 2 },
+        globallyCountedRankIndices = { 1, 1, 4, -2 },
     })
 
     expectEqual(result.score, 42, 'stored score should be sanitized')
@@ -162,5 +185,12 @@ runCase('toStoredValue serializes sanitized highest achieved values', function()
         result.equippedVehicleMountId or '',
         'mount_alpha',
         'stored equipped mount should persist'
+    )
+    expectEqual(result.rankReachCounts[1], 3, 'stored rank counts should sanitize to whole numbers')
+    expectEqual(result.rankReachCounts[10], 2, 'stored rank counts should preserve valid values')
+    expectEqual(
+        #result.globallyCountedRankIndices,
+        2,
+        'stored globally-counted ranks should remain valid and unique'
     )
 end)

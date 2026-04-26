@@ -5,6 +5,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 ## What this project does
 - Spawns players into a stylized starter world with a baseplate, hills, paths, Creator Store tree assets ("Realistic Trees", asset `3256343670`), flower bush assets ("Realistic bush flowers mesh", asset `9187138703`), and an `Age of Beads` rock/grass decor cluster using Creator Store assets (`4038061999`, `2846635652`, `9217425479`, `4453595550`, `13785580624`, `1925262929`, `16170402764`) plus deterministic path/hill/rock props built from decor specs.
 - Creates visible glowing circular scoring zones across 12 progression ages, while each age's floating name stays hidden until that age is unlocked by score and shows each zone's score multiplier.
+- Dynamically tints the sky based on the scoring zone your character is currently standing in, then returns to a neutral sky tint when outside score zones.
 - Spawns players at an `Age of Beads`-side spawn pad instead of the world center.
 - Plays looping background music from `assets/Ascension.mp3` (`rbxasset://assets/Ascension.mp3`).
 - Shows `Score: 0` UI on join/spawn.
@@ -13,9 +14,11 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Shows a live next-unlock tracker (for example `Next: Age of Brass at 600 (595 to go)`) so players can clearly see the score needed for the next age.
 - Adds a 96-rank secondary progression track spanning 12 historical ages (8 ranks per age), with themed rank names configured in shared constants.
 - Shows a rank UI panel with current rank name, a per-rank progress bar, and compact progress text toward the next rank including current and next rank score multipliers.
+- Shows a center-screen celebratory rank-up card with rank name, rank description, personal times reached, and global players-ever-reached totals; first-time rank unlocks linger longer than rebirth re-unlocks.
 - Displays each player's current rank title above their character's head so other players can see progression at a glance.
 - Grants every rank a unique aura style that ramps up in spectacle with stronger glow, denser particles, animated pulsing light, and scale growth as players climb toward max rank.
 - Shows floating score-gain popups in random screen positions whenever score increases (for example `+1.6k`).
+- Emits a small sparkle "score particle" burst from a player's avatar when score ticks while standing in an unlocked scoring zone; particles stop as soon as the player exits scoring zones.
 - Shows an owner-only admin panel with buttons to multiply current score (`2x`, `10x`), skip the Lucky Chest cooldown timer, and a guarded reset button that requires a second confirmation click before wiping your own score/rebirths.
 - Extends the owner-only admin panel with an **Add Reward** modal to add Lucky Chest hat/vehicle rewards from Roblox Creator Store asset links or raw asset IDs, persisted in a global server-side reward catalog.
 - Adds a server-authoritative Rewards inventory panel where players can view unlocked hats/mounts, equip one hat, equip one vehicle mount, and unequip either slot.
@@ -147,6 +150,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - The rank title above each player's head updates automatically as score crosses rank thresholds.
    - Your avatar aura transforms every rank with unique colors, stronger particles/light pulses, and increased size at higher ranks.
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
+   - While score is ticking in an unlocked zone, small score particles sparkle off your avatar; leaving zones stops both score gain and score particles.
    - Rebirth grants temporary catch-up acceleration below your previous best score, then progression returns to the baseline timing curve after you catch up.
    - Age zones unlock in sequence as your score passes each requirement threshold.
    - Entering the `Rebirth` zone shows the current fixed rebirth score cost (`1,000`), grants `+1 rebirth` per `1,000` score spent, resets score to `0` only when that cost is met, and resumes zone-based ticking from zero (with multipliers) while preserving highest achieved score/rank/age milestones for catch-up pacing.
