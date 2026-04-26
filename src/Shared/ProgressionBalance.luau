@@ -137,9 +137,7 @@ function ProgressionBalance.getCatchUpMultiplier(
     _highestScoreAchieved: number,
     rebirths: number
 ): number
-    local catchUpMultiplier = 1
-        + math.max(rebirths, 0) * ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH
-    return math.min(ProgressionBalance.MAX_CATCH_UP_MULTIPLIER, catchUpMultiplier)
+    return 1 + math.max(rebirths, 0) * ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH
 end
 
 function ProgressionBalance.build(rankNames: { string }): ({ RankConfig }, { AgeBalanceConfig })

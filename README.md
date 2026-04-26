@@ -25,7 +25,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Unlock requirements and score gains scale so each age takes roughly the same active time to complete while totals grow exponentially.
 - Increments score while inside age zones, with generated non-linear rank/age requirements and per-age score-per-second values derived from a shared progression curve.
 - A fresh no-rebirth run targets rank transition times of `30s, 40s, 50s, ...` while players stay in their highest unlocked age zone.
-- Entering the glowing `Rebirth` zone now uses a visible fixed score cost of `1,000` per rebirth and grants `+1 rebirth` for each `1,000` score spent, then resets current score to `0`, preserves highest achieved milestones, and increases zone score-per-second multipliers based on rebirth count.
+- Entering the glowing `Rebirth` zone now uses a visible fixed score cost of `1,000` per rebirth and grants `+1 rebirth` for each `1,000` score spent, then resets current score to `0`, preserves highest achieved milestones, and increases zone score-per-second multipliers linearly based on rebirth count.
 - During deterministic hourly bonus windows, rebirthing from the final age zone grants extra rebirths for high-risk/high-reward timing.
 - Entering a locked age zone before meeting its score requirement now flings the player away, kills them, plays a global death SFX, and bursts a cloud of `Nope!` text particles.
 - Stops score gain immediately when leaving each zone.
@@ -147,7 +147,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - The rank title above each player's head updates automatically as score crosses rank thresholds.
    - Your avatar aura transforms every rank with unique colors, stronger particles/light pulses, and increased size at higher ranks.
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
-   - Rebirth increases your score gain multiplier in every age zone when you resume scoring, including after you pass your previous best score.
+   - Rebirth increases your score gain multiplier in every age zone when you resume scoring, including after you pass your previous best score, and each additional rebirth adds another fixed increment.
    - Age zones unlock in sequence as your score passes each requirement threshold.
    - Entering the `Rebirth` zone shows the current fixed rebirth score cost (`1,000`), grants `+1 rebirth` per `1,000` score spent, resets score to `0` only when that cost is met, and resumes zone-based ticking from zero (with rebirth/rank/bonus multipliers) while preserving highest achieved score/rank/age milestones.
    - A giant floating screen above the rebirth area shows the current all-time top scorer name and best-ever score across all players.

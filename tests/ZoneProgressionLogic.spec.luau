@@ -120,7 +120,7 @@ runCase('staying in rebirth zone does not repeatedly grant rebirths', function()
     expectEqual(second.state.rebirths, 4, 'rebirth grants should only happen on zone entry')
 end)
 
-runCase('rebirth multiplier caps at max catch-up multiplier', function()
+runCase('rebirth multiplier continues scaling with higher rebirth counts', function()
     local result = tick(ZoneProgressionLogic.newState(0, 10, 100, 1, 1), {
         isInsideAgeZones = {
             true,
@@ -129,7 +129,7 @@ runCase('rebirth multiplier caps at max catch-up multiplier', function()
         },
     })
 
-    expectEqual(result.state.score, 30, 'rebirth multiplier should cap at 30x')
+    expectEqual(result.state.score, 71, '10 rebirths should apply a 71x multiplier')
 end)
 
 runCase('rebirth multiplier still applies at or above highest score achieved', function()
@@ -258,7 +258,7 @@ runCase(
         )
         expectEqual(
             afterFirstZoneTick.state.score,
-            30,
+            1085085,
             'next zone tick should restart from zero and use rebirth multiplier, not restore prior score'
         )
     end
