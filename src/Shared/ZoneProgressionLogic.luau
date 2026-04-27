@@ -25,6 +25,9 @@ export type ZoneProgressionInput = {
     isInsideRebirthZone: boolean,
     rankConfigs: { ProgressionBalance.RankConfig },
     postRecordRebirthMultiplier: number?,
+    rebirthMultiplierScale: number?,
+    rebirthMultiplierPower: number?,
+    maxRebirthScoreMultiplier: number?,
     bonusScoreMultiplier: number?,
     rankScoreMultiplier: number?,
     rebirthConfig: RebirthLogic.RebirthConfig?,
@@ -65,8 +68,15 @@ function ZoneProgressionLogic.tick(
 ): ZoneProgressionResult
     local postRecordRebirthMultiplier = input.postRecordRebirthMultiplier
         or ProgressionBalance.POST_RECORD_REBIRTH_MULTIPLIER
+    local rebirthMultiplier = ProgressionBalance.getRebirthScoreMultiplier(
+        state.rebirths,
+        input.rebirthMultiplierScale,
+        input.rebirthMultiplierPower,
+        input.maxRebirthScoreMultiplier
+    )
 
-    local scoreMultiplier = (input.bonusScoreMultiplier or 1)
+    local scoreMultiplier = rebirthMultiplier
+        * (input.bonusScoreMultiplier or 1)
         * (input.rankScoreMultiplier or 1)
         * postRecordRebirthMultiplier
 

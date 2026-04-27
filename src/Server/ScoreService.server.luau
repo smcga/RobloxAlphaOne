@@ -1558,6 +1558,9 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             isInsideRebirthZone = isInsideRebirthZone,
             rankConfigs = Constants.RANK_CONFIGS,
             postRecordRebirthMultiplier = Constants.POST_RECORD_REBIRTH_MULTIPLIER,
+            rebirthMultiplierScale = Constants.REBIRTH_SCORE_MULTIPLIER_SCALE,
+            rebirthMultiplierPower = Constants.REBIRTH_SCORE_MULTIPLIER_POWER,
+            maxRebirthScoreMultiplier = Constants.MAX_REBIRTH_SCORE_MULTIPLIER,
             bonusScoreMultiplier = boostedMultiplier,
             rankScoreMultiplier = RankProgressionLogic.getScoreMultiplierForScore(
                 state.progressionState.score,

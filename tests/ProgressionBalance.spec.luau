@@ -85,3 +85,19 @@ runCase('age gain ratios remain strictly increasing across progression', functio
         )
     end
 end)
+
+runCase('rebirth multiplier uses diminishing returns and stays monotonic', function()
+    local zero = ProgressionBalance.getRebirthScoreMultiplier(0)
+    local four = ProgressionBalance.getRebirthScoreMultiplier(4)
+    local oneHundred = ProgressionBalance.getRebirthScoreMultiplier(100)
+
+    expectTrue(zero == 1, 'zero rebirths should keep 1x multiplier')
+    expectTrue(four > zero, 'rebirth multiplier should increase with rebirths')
+    expectTrue(oneHundred > four, 'multiplier should remain monotonic at high rebirths')
+    expectTrue(oneHundred < 5, 'diminishing scaling should avoid runaway at 100 rebirths')
+end)
+
+runCase('rebirth multiplier respects configured cap', function()
+    local capped = ProgressionBalance.getRebirthScoreMultiplier(50_000, nil, nil, 12)
+    expectTrue(capped == 12, 'multiplier should clamp to configured cap')
+end)
