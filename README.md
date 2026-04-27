@@ -10,7 +10,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Shows `Score: 0` UI on join/spawn.
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
 - Shows `Rebirths: 0` UI under score on join/spawn.
-- Shows a neat top-centered age status panel with `Current Age` and `Next Age` progress text (for example `Next Age: Age of Brass at 600 (595 to go)`).
+- Shows a neat top-centered age status panel near the top edge with `Current Age` and `Next Age` progress text (for example `Next Age: Age of Brass at 600 (595 to go)`).
 - Adds a 96-rank secondary progression track spanning 12 historical ages (8 ranks per age), with themed rank names configured in shared constants.
 - Shows a rank UI panel centered along the bottom HUD rail with comfortable padding, current rank name, a per-rank progress bar, and compact progress text toward the next rank including current and next rank score multipliers.
 - Displays each player's current rank title above their character's head so other players can see progression at a glance.
@@ -141,7 +141,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
 8. Verify expected MVP behavior:
    - A `Baseplate`, a `GeneratedWorld/WorldDecor` folder for generated decor, an optional `ManualWorld` folder for hand-placed decor you want persisted to layout scripts, twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
-   - You see a top-centered age status panel in the UI with both current age and next-age unlock progress (example: `Next Age: Age of Brass at 600 (595 to go)`), which updates as your score increases.
+   - You see a top-centered age status panel near the top edge in the UI with both current age and next-age unlock progress (example: `Next Age: Age of Brass at 600 (595 to go)`), which updates as your score increases.
    - You see a rank progression panel (`Pebble Counter` initially) with a filling progress bar and progress text toward the next rank.
    - Whenever score increases, you see a brief floating popup with the compact increase amount (example: `+1.6k`) at a random position.
    - The rank title above each player's head updates automatically as score crosses rank thresholds.

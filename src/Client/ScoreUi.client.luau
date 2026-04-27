@@ -7,6 +7,7 @@ local playerGui = player:WaitForChild('PlayerGui')
 local camera = workspace.CurrentCamera
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
+local AgeUiLayoutLogic = require(Shared:WaitForChild('AgeUiLayoutLogic'))
 local Constants = require(Shared:WaitForChild('Constants'))
 local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
@@ -52,11 +53,13 @@ rebirthsLabel.Position = UDim2.fromOffset(16, 72)
 rebirthsLabel.Text = 'Rebirths: 0'
 rebirthsLabel.Parent = screenGui
 
+local agePanelLayout = AgeUiLayoutLogic.getAgeStatusPanelLayout()
+
 local ageStatusPanel = Instance.new('Frame')
 ageStatusPanel.Name = 'AgeStatusPanel'
-ageStatusPanel.Size = UDim2.fromOffset(460, 100)
+ageStatusPanel.Size = UDim2.fromOffset(agePanelLayout.width, agePanelLayout.height)
 ageStatusPanel.AnchorPoint = Vector2.new(0.5, 0)
-ageStatusPanel.Position = UDim2.new(0.5, 0, 0, 16)
+ageStatusPanel.Position = UDim2.new(0.5, 0, 0, agePanelLayout.topPadding)
 ageStatusPanel.BackgroundTransparency = 0.12
 ageStatusPanel.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
 ageStatusPanel.Parent = screenGui
