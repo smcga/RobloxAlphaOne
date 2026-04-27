@@ -22,19 +22,15 @@ ProgressionBalance.REBIRTH_MULTIPLIER_SCALE = 0.35
 ProgressionBalance.REBIRTH_MULTIPLIER_POWER = 0.5
 ProgressionBalance.MAX_REBIRTH_SCORE_MULTIPLIER = 12
 
-local AGE_GAIN_RATIO = 449623.4583190185
-ProgressionBalance.AGE_GAIN_RATIO = AGE_GAIN_RATIO
-
-function ProgressionBalance.getTargetSecondsForRankTransition(transitionRank: number): number
-    return 30 + 10 * (transitionRank - 1)
-end
-
-function ProgressionBalance.getAgeIndexForRankTransition(transitionRank: number): number
-    return math.min(
-        ProgressionBalance.TOTAL_AGES,
-        math.floor((transitionRank - 1) / ProgressionBalance.RANKS_PER_AGE) + 1
-    )
-end
+-- Progression guardrail:
+-- Keep age power growth sane and tunable. Avoid returning to giant per-age multipliers
+-- (for example hundreds of thousands x per age), which collapses readability and pacing.
+ProgressionBalance.AGE_REQUIREMENT_BASE = 1_000
+ProgressionBalance.AGE_REQUIREMENT_GROWTH = 8
+ProgressionBalance.AGE_MULTIPLIER_BASE = 3
+ProgressionBalance.RANK_MULTIPLIER_BASE = 1.15
+ProgressionBalance.RANK_REQUIREMENT_CURVE = 1.35
+ProgressionBalance.FINAL_RANK_AGE_PROGRESS = 0.9
 
 function ProgressionBalance.getAgeIndexForRank(rankIndex: number): number
     return math.min(
@@ -43,20 +39,66 @@ function ProgressionBalance.getAgeIndexForRank(rankIndex: number): number
     )
 end
 
+function ProgressionBalance.getAgeRequirement(ageIndex: number): number
+    if ageIndex <= 1 then
+        return 0
+    end
+
+    return ProgressionBalance.AGE_REQUIREMENT_BASE
+        * (ProgressionBalance.AGE_REQUIREMENT_GROWTH ^ (ageIndex - 2))
+end
+
+function ProgressionBalance.getAgeMultiplier(ageIndex: number): number
+    local sanitizedAgeIndex = math.max(1, math.floor(ageIndex))
+    return ProgressionBalance.AGE_MULTIPLIER_BASE ^ (sanitizedAgeIndex - 1)
+end
+
+function ProgressionBalance.getRankMultiplier(rankIndex: number): number
+    local sanitizedRankIndex = math.max(1, math.floor(rankIndex))
+    local rankWithinAge = (sanitizedRankIndex - 1) % ProgressionBalance.RANKS_PER_AGE
+    return ProgressionBalance.RANK_MULTIPLIER_BASE ^ rankWithinAge
+end
+
+function ProgressionBalance.getRankRequirement(rankIndex: number): number
+    local sanitizedRankIndex = math.max(1, math.floor(rankIndex))
+    if sanitizedRankIndex <= 1 then
+        return 0
+    end
+
+    local ageIndex = math.floor((sanitizedRankIndex - 1) / ProgressionBalance.RANKS_PER_AGE) + 1
+    local rankWithinAge = (sanitizedRankIndex - 1) % ProgressionBalance.RANKS_PER_AGE
+
+    local currentAgeRequirement = ProgressionBalance.getAgeRequirement(ageIndex)
+    local nextAgeRequirement = ProgressionBalance.getAgeRequirement(ageIndex + 1)
+
+    if ageIndex >= ProgressionBalance.TOTAL_AGES then
+        nextAgeRequirement = currentAgeRequirement * ProgressionBalance.AGE_REQUIREMENT_GROWTH
+    end
+
+    local rawProgress = rankWithinAge / ProgressionBalance.RANKS_PER_AGE
+    local scaledProgress = ProgressionBalance.FINAL_RANK_AGE_PROGRESS
+        * (rawProgress ^ ProgressionBalance.RANK_REQUIREMENT_CURVE)
+
+    return currentAgeRequirement + (nextAgeRequirement - currentAgeRequirement) * scaledProgress
+end
+
 local function getAgeScorePerSecond(ageIndex: number): number
-    return ProgressionBalance.BASE_AGE_SCORE_PER_SECOND * (AGE_GAIN_RATIO ^ (ageIndex - 1))
+    return ProgressionBalance.BASE_AGE_SCORE_PER_SECOND
+        * ProgressionBalance.getAgeMultiplier(ageIndex)
 end
 
 local function computeRankRequirements(): { number }
     local requirements = table.create(ProgressionBalance.TOTAL_RANKS)
-    requirements[1] = 0
 
-    for transitionRank = 1, ProgressionBalance.TOTAL_RANKS - 1 do
-        local ageIndex = ProgressionBalance.getAgeIndexForRankTransition(transitionRank)
-        local transitionSeconds =
-            ProgressionBalance.getTargetSecondsForRankTransition(transitionRank)
-        requirements[transitionRank + 1] = requirements[transitionRank]
-            + getAgeScorePerSecond(ageIndex) * transitionSeconds
+    for rankIndex = 1, ProgressionBalance.TOTAL_RANKS do
+        local generatedRequirement = ProgressionBalance.getRankRequirement(rankIndex)
+        if rankIndex == 1 then
+            requirements[rankIndex] = 0
+        else
+            local previousRequirement = requirements[rankIndex - 1]
+            local roundedRequirement = math.floor(generatedRequirement)
+            requirements[rankIndex] = math.max(previousRequirement + 1, roundedRequirement)
+        end
     end
 
     return requirements
@@ -151,6 +193,43 @@ function ProgressionBalance.getRebirthScoreMultiplier(
     end
 
     return multiplier
+end
+
+function ProgressionBalance.debugPrintGeneratedProgression(
+    rankConfigs: { RankConfig },
+    ageConfigs: { AgeBalanceConfig }
+)
+    print('=== Progression Debug: Ages ===')
+    for _, ageConfig in ipairs(ageConfigs) do
+        local ageMultiplier = ProgressionBalance.getAgeMultiplier(ageConfig.ageIndex)
+        print(
+            string.format(
+                'Age %02d | requirement=%d | multiplier=%.4f | scoreIncrement=%.4f',
+                ageConfig.ageIndex,
+                ageConfig.requiredScore,
+                ageMultiplier,
+                ageConfig.scoreIncrement
+            )
+        )
+    end
+
+    print('=== Progression Debug: Ranks ===')
+    for rankIndex, rankConfig in ipairs(rankConfigs) do
+        local ageIndex = ProgressionBalance.getAgeIndexForRank(rankIndex)
+        local rankWithinAge = (rankIndex - 1) % ProgressionBalance.RANKS_PER_AGE
+        local rankMultiplier = ProgressionBalance.getRankMultiplier(rankIndex)
+        print(
+            string.format(
+                'Rank %02d | age=%02d | withinAge=%d | requirement=%d | multiplier=%.4f | name=%s',
+                rankIndex,
+                ageIndex,
+                rankWithinAge,
+                rankConfig.requiredScore,
+                rankMultiplier,
+                rankConfig.name
+            )
+        )
+    end
 end
 
 function ProgressionBalance.build(rankNames: { string }): ({ RankConfig }, { AgeBalanceConfig })

@@ -14,6 +14,14 @@ local function expectEqual(actual: any, expected: any, message: string)
     end
 end
 
+local function expectApprox(actual: number, expected: number, tolerance: number, message: string)
+    if math.abs(actual - expected) > tolerance then
+        error(
+            string.format('%s (expected %s, got %s)', message, tostring(expected), tostring(actual))
+        )
+    end
+end
+
 local function runCase(name: string, fn: () -> ())
     fn()
     print(string.format('[PASS] %s', name))
@@ -68,16 +76,21 @@ runCase('getRankProgress returns maxed state when highest rank is reached', func
 end)
 
 runCase('rank multiplier starts at 1x for first rank', function()
-    local multiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(1, 0.01)
+    local multiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(1, 1.15, 8)
     expectEqual(multiplier, 1, 'first rank multiplier should be 1x')
 end)
 
-runCase('rank multiplier increases linearly by configured step', function()
-    local multiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(6, 0.02)
-    expectEqual(multiplier, 1.1, 'rank 6 with 2% step should be 1.1x')
+runCase('rank multiplier grows exponentially within age', function()
+    local multiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(8, 1.15, 8)
+    expectApprox(multiplier, 2.6600198805, 1e-9, 'rank 8 should be about 2.66x')
+end)
+
+runCase('rank multiplier resets after each age boundary', function()
+    local multiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(9, 1.15, 8)
+    expectEqual(multiplier, 1, 'first rank of next age should reset to 1x')
 end)
 
 runCase('score-based multiplier resolves from unlocked rank', function()
-    local multiplier = RankProgressionLogic.getScoreMultiplierForScore(1800, rankConfigs, 0.05)
-    expectEqual(multiplier, 1.05, 'second rank should apply one multiplier step')
+    local multiplier = RankProgressionLogic.getScoreMultiplierForScore(1800, rankConfigs, 1.15, 8)
+    expectApprox(multiplier, 1.15, 1e-9, 'second rank should apply one 1.15x step')
 end)

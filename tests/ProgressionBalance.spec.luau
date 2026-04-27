@@ -6,12 +6,12 @@ local function expectTrue(condition: boolean, message: string)
     end
 end
 
-local function approxRelative(actual: number, expected: number, tolerance: number): boolean
-    if expected == 0 then
-        return math.abs(actual) <= tolerance
+local function expectEqual(actual: number, expected: number, message: string)
+    if actual ~= expected then
+        error(
+            string.format('%s (expected %s, got %s)', message, tostring(expected), tostring(actual))
+        )
     end
-
-    return math.abs(actual - expected) / math.abs(expected) <= tolerance
 end
 
 local function runCase(name: string, fn: () -> ())
@@ -26,9 +26,9 @@ end
 local rankConfigs, ageConfigs = ProgressionBalance.build(rankNames)
 
 runCase('generated progression has required counts and aligned age gates', function()
-    expectTrue(#rankConfigs == 96, 'should generate exactly 96 ranks')
-    expectTrue(#ageConfigs == 12, 'should generate exactly 12 ages')
-    expectTrue(rankConfigs[1].requiredScore == 0, 'rank 1 should start at zero')
+    expectEqual(#rankConfigs, 96, 'should generate exactly 96 ranks')
+    expectEqual(#ageConfigs, 12, 'should generate exactly 12 ages')
+    expectEqual(rankConfigs[1].requiredScore, 0, 'rank 1 should start at zero')
 
     for rankIndex = 2, #rankConfigs do
         expectTrue(
@@ -37,53 +37,75 @@ runCase('generated progression has required counts and aligned age gates', funct
         )
     end
 
-    expectTrue(
-        ageConfigs[1].requiredScore == rankConfigs[1].requiredScore,
+    expectEqual(
+        ageConfigs[1].requiredScore,
+        rankConfigs[1].requiredScore,
         'age 1 gate should match rank 1 requirement'
     )
-    expectTrue(
-        ageConfigs[2].requiredScore == rankConfigs[9].requiredScore,
+    expectEqual(
+        ageConfigs[2].requiredScore,
+        rankConfigs[9].requiredScore,
         'age 2 gate should match rank 9 requirement'
     )
-    expectTrue(
-        ageConfigs[12].requiredScore == rankConfigs[89].requiredScore,
+    expectEqual(
+        ageConfigs[12].requiredScore,
+        rankConfigs[89].requiredScore,
         'age 12 gate should match rank 89 requirement'
     )
 end)
 
-runCase('final rank target remains compact-formatted and near max target', function()
-    local finalRequirement = rankConfigs[#rankConfigs].requiredScore
-    expectTrue(finalRequirement > 1e65, 'final requirement should be above 1e65')
-    expectTrue(finalRequirement < 1e66, 'final requirement should remain below 1e66')
-    expectTrue(
-        approxRelative(finalRequirement, ProgressionBalance.MAX_COMPACT_SCORE_TARGET, 1e-3),
-        'final requirement should be within 0.1% of target'
+runCase('age requirements follow configured base and growth constants', function()
+    expectEqual(ProgressionBalance.getAgeRequirement(1), 0, 'age 1 requirement should be zero')
+    expectEqual(ProgressionBalance.getAgeRequirement(2), 1000, 'age 2 requirement should be 1,000')
+    expectEqual(ProgressionBalance.getAgeRequirement(3), 8000, 'age 3 requirement should be 8,000')
+    expectEqual(
+        ProgressionBalance.getAgeRequirement(6),
+        4_096_000,
+        'age 6 requirement should match curve'
     )
 end)
 
-runCase('every transition matches target seconds for its age gain', function()
-    for transitionRank = 1, 95 do
-        local deltaRequirement = rankConfigs[transitionRank + 1].requiredScore
-            - rankConfigs[transitionRank].requiredScore
-        local ageIndex = ProgressionBalance.getAgeIndexForRankTransition(transitionRank)
-        local gainPerSecond = ageConfigs[ageIndex].scoreIncrement
-        local actualSeconds = deltaRequirement / gainPerSecond
-        local expectedSeconds = ProgressionBalance.getTargetSecondsForRankTransition(transitionRank)
-
-        expectTrue(
-            approxRelative(actualSeconds, expectedSeconds, 1e-9),
-            string.format('transition %d timing should match expected curve', transitionRank)
-        )
-    end
+runCase('age multipliers follow configured exponential base', function()
+    expectEqual(ProgressionBalance.getAgeMultiplier(1), 1, 'age 1 should be 1x')
+    expectEqual(ProgressionBalance.getAgeMultiplier(2), 3, 'age 2 should be 3x')
+    expectEqual(ProgressionBalance.getAgeMultiplier(4), 27, 'age 4 should be 27x')
 end)
 
-runCase('age gain ratios remain strictly increasing across progression', function()
-    for ageIndex = 2, #ageConfigs do
-        expectTrue(
-            ageConfigs[ageIndex].scoreIncrement > ageConfigs[ageIndex - 1].scoreIncrement,
-            string.format('age %d score gain should exceed prior age', ageIndex)
-        )
-    end
+runCase('rank multipliers scale meaningfully within each age and reset per age', function()
+    expectEqual(ProgressionBalance.getRankMultiplier(1), 1, 'rank 1 should be 1x')
+    expectTrue(
+        ProgressionBalance.getRankMultiplier(8) > 2.6,
+        'rank 8 should be stronger than 2.6x inside age 1'
+    )
+    expectEqual(ProgressionBalance.getRankMultiplier(9), 1, 'rank 9 should reset at new age')
+end)
+
+runCase('rank requirements interpolate between age requirements', function()
+    expectEqual(rankConfigs[1].requiredScore, 0, 'rank 1 requirement should be zero')
+    expectEqual(rankConfigs[9].requiredScore, 1_000, 'rank 9 should match age 2 gate')
+    expectEqual(rankConfigs[17].requiredScore, 8_000, 'rank 17 should match age 3 gate')
+
+    local ageTwoStart = rankConfigs[9].requiredScore
+    local ageTwoEnd = ProgressionBalance.getAgeRequirement(3)
+    expectTrue(
+        rankConfigs[16].requiredScore < ageTwoEnd,
+        'last rank before next age gate should stay below next age requirement'
+    )
+    expectTrue(
+        rankConfigs[16].requiredScore > ageTwoStart,
+        'last rank of age should progress beyond age start requirement'
+    )
+end)
+
+runCase('final age ranks continue progressing using extrapolated next-age requirement', function()
+    local ageTwelveRequirement = ProgressionBalance.getAgeRequirement(12)
+    local finalRankRequirement = rankConfigs[96].requiredScore
+
+    expectEqual(rankConfigs[89].requiredScore, ageTwelveRequirement, 'rank 89 should match age 12')
+    expectTrue(
+        finalRankRequirement > ageTwelveRequirement,
+        'final rank should exceed age 12 base requirement'
+    )
 end)
 
 runCase('rebirth multiplier uses diminishing returns and stays monotonic', function()
@@ -91,7 +113,7 @@ runCase('rebirth multiplier uses diminishing returns and stays monotonic', funct
     local four = ProgressionBalance.getRebirthScoreMultiplier(4)
     local oneHundred = ProgressionBalance.getRebirthScoreMultiplier(100)
 
-    expectTrue(zero == 1, 'zero rebirths should keep 1x multiplier')
+    expectEqual(zero, 1, 'zero rebirths should keep 1x multiplier')
     expectTrue(four > zero, 'rebirth multiplier should increase with rebirths')
     expectTrue(oneHundred > four, 'multiplier should remain monotonic at high rebirths')
     expectTrue(oneHundred < 5, 'diminishing scaling should avoid runaway at 100 rebirths')
@@ -99,5 +121,10 @@ end)
 
 runCase('rebirth multiplier respects configured cap', function()
     local capped = ProgressionBalance.getRebirthScoreMultiplier(50_000, nil, nil, 12)
-    expectTrue(capped == 12, 'multiplier should clamp to configured cap')
+    expectEqual(capped, 12, 'multiplier should clamp to configured cap')
+end)
+
+runCase('debug printer emits generated age and rank tables without throwing', function()
+    ProgressionBalance.debugPrintGeneratedProgression(rankConfigs, ageConfigs)
+    expectTrue(true, 'debug print should complete')
 end)

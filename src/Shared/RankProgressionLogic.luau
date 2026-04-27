@@ -1,3 +1,5 @@
+local ProgressionBalance = require('./ProgressionBalance')
+
 export type RankConfig = {
     name: string,
     requiredScore: number,
@@ -93,20 +95,30 @@ end
 
 function RankProgressionLogic.getScoreMultiplierForRankIndex(
     rankIndex: number,
-    multiplierStep: number
+    multiplierBase: number,
+    ranksPerAge: number?
 ): number
     local sanitizedRankIndex = math.max(1, math.floor(rankIndex))
-    local sanitizedStep = math.max(multiplierStep, 0)
-    return 1 + ((sanitizedRankIndex - 1) * sanitizedStep)
+    local sanitizedMultiplierBase = math.max(multiplierBase, 1)
+    local sanitizedRanksPerAge =
+        math.max(1, math.floor(ranksPerAge or ProgressionBalance.RANKS_PER_AGE))
+    local rankWithinAge = (sanitizedRankIndex - 1) % sanitizedRanksPerAge
+
+    return sanitizedMultiplierBase ^ rankWithinAge
 end
 
 function RankProgressionLogic.getScoreMultiplierForScore(
     score: number,
     rankConfigs: { RankConfig },
-    multiplierStep: number
+    multiplierBase: number,
+    ranksPerAge: number?
 ): number
     local rankIndex = RankProgressionLogic.getCurrentRankIndex(score, rankConfigs)
-    return RankProgressionLogic.getScoreMultiplierForRankIndex(rankIndex, multiplierStep)
+    return RankProgressionLogic.getScoreMultiplierForRankIndex(
+        rankIndex,
+        multiplierBase,
+        ranksPerAge
+    )
 end
 
 return RankProgressionLogic

@@ -380,13 +380,15 @@ local function setScoreAndRebirths(score: number, rebirths: number)
     rankProgressFill.Size = UDim2.fromScale(rankProgress.progressAlpha, 1)
     local currentRankMultiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(
         rankProgress.currentRankIndex,
-        Constants.RANK_SCORE_MULTIPLIER_STEP
+        Constants.RANK_MULTIPLIER_BASE,
+        Constants.RANKS_PER_AGE
     )
 
     if rankProgress.nextRankName and rankProgress.nextRankRequiredScore then
         local nextRankMultiplier = RankProgressionLogic.getScoreMultiplierForRankIndex(
             rankProgress.nextRankIndex or rankProgress.currentRankIndex,
-            Constants.RANK_SCORE_MULTIPLIER_STEP
+            Constants.RANK_MULTIPLIER_BASE,
+            Constants.RANKS_PER_AGE
         )
         local progressValue = rankProgress.scoreIntoCurrentRank
         local neededValue = rankProgress.nextRankRequiredScore

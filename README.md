@@ -10,7 +10,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Shows `Score: 0` UI on join/spawn.
 - Uses compact score/rebirth display suffixes for huge values (for example `Qi`, `Sx`, `Sp`, `Dc`).
 - Shows `Rebirths: 0` UI under score on join/spawn.
-- Shows a live next-unlock tracker (for example `Next: Age of Brass at 600 (595 to go)`) so players can clearly see the score needed for the next age.
+- Shows a live next-unlock tracker (for example `Next: Age of Brass at 1k (995 to go)`) so players can clearly see the score needed for the next age.
 - Adds a 96-rank secondary progression track spanning 12 historical ages (8 ranks per age), with themed rank names configured in shared constants.
 - Shows a rank UI panel centered along the bottom HUD rail with comfortable padding, current rank name, a per-rank progress bar, and compact progress text toward the next rank including current and next rank score multipliers.
 - Displays each player's current rank title above their character's head so other players can see progression at a glance.
@@ -21,10 +21,9 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Adds a server-authoritative Rewards inventory panel where players can view unlocked hats/mounts, equip one hat, equip one vehicle mount, and unequip either slot.
 - Equips Lucky Chest hats by loading Creator Store assets server-side (with script descendants removed) and attaching safe visuals to the avatar; current temporary forced hat asset is `Classic Cowboy hat` (`17075928250`) for all hat rewards.
 - Equips Lucky Chest vehicle mounts as sanitized server-spawned visual models welded to the player, with a modest server-controlled movement speed boost while mounted; current temporary forced mount asset is `Drift Car mobile` (`15244136642`) for all mount rewards.
-- Increments score while inside age zones, with each age granting a higher score-per-second multiplier and rank multiplier layering on top.
-- Unlock requirements and score gains scale so each age takes roughly the same active time to complete while totals grow exponentially.
-- Increments score while inside age zones, with generated non-linear rank/age requirements and per-age score-per-second values derived from a shared progression curve.
-- A fresh no-rebirth run targets rank transition times of `30s, 40s, 50s, ...` while players stay in their highest unlocked age zone.
+- Increments score while inside age zones, with formula-generated age/rank multipliers and existing rebirth/chest multipliers layered on top.
+- Unlock requirements and score gains are generated from tunable constants (12 ages, 96 ranks, 8 ranks per age) so ages are major milestones while ranks remain meaningful short-term stepping stones.
+- Age requirements now follow `1,000 * 8^(ageIndex-2)` (age 1 starts at `0`) and age multipliers follow `3^(ageIndex-1)`, avoiding runaway per-age spikes.
 - Entering the glowing `Rebirth` zone now uses a visible fixed score cost of `1,000`, keeps early rebirth grants effectively linear, and applies diminishing returns to very high-score rebirth bursts so late-game progression doesn't skip multiple ages in one tick.
 - During deterministic hourly bonus windows, rebirthing from the final age zone grants extra rebirths for high-risk/high-reward timing.
 - Entering a locked age zone before meeting its score requirement now flings the player away, kills them, plays a global death SFX, and bursts a cloud of `Nope!` text particles.
@@ -141,7 +140,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
 8. Verify expected MVP behavior:
    - A `Baseplate`, a `GeneratedWorld/WorldDecor` folder for generated decor, an optional `ManualWorld` folder for hand-placed decor you want persisted to layout scripts, twelve glowing age score zones (`Age of Beads` through `Age Beyond Humanity`), and magenta `RebirthZone` appear in `Workspace`.
    - You see `Score: 0` and `Rebirths: 0` in the UI.
-   - You see a next-unlock tracker in the UI (example: `Next: Age of Brass at 600 (595 to go)`), which updates as your score increases.
+   - You see a next-unlock tracker in the UI (example: `Next: Age of Brass at 1k (995 to go)`), which updates as your score increases.
    - You see a rank progression panel (`Pebble Counter` initially) with a filling progress bar and progress text toward the next rank.
    - Whenever score increases, you see a brief floating popup with the compact increase amount (example: `+1.6k`) at a random position.
    - The rank title above each player's head updates automatically as score crosses rank thresholds.

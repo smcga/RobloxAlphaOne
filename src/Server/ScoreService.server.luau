@@ -1565,7 +1565,8 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             rankScoreMultiplier = RankProgressionLogic.getScoreMultiplierForScore(
                 state.progressionState.score,
                 Constants.RANK_CONFIGS,
-                Constants.RANK_SCORE_MULTIPLIER_STEP
+                Constants.RANK_MULTIPLIER_BASE,
+                Constants.RANKS_PER_AGE
             ),
             rebirthConfig = REBIRTH_CONFIG,
             nowUnixTime = os.time(),
