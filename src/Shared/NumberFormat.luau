@@ -65,4 +65,21 @@ function NumberFormat.formatCompact(value: number): string
     return string.format('%s%s %s', sign, scaledText, SUFFIXES[suffixIndex + 1])
 end
 
+function NumberFormat.formatWithCommas(value: number): string
+    if value ~= value then
+        return 'NaN'
+    end
+
+    local isNegative = value < 0
+    local absoluteValue = math.abs(value)
+    local integerText = string.format('%.0f', math.floor(absoluteValue))
+    local withCommas = integerText:reverse():gsub('(%d%d%d)', '%1,'):reverse():gsub('^,', '')
+
+    if isNegative then
+        return string.format('-%s', withCommas)
+    end
+
+    return withCommas
+end
+
 return NumberFormat
