@@ -7,6 +7,7 @@ local playerGui = player:WaitForChild('PlayerGui')
 local camera = workspace.CurrentCamera
 
 local Shared = ReplicatedStorage:WaitForChild('Shared')
+local AgeUiLayoutLogic = require(Shared:WaitForChild('AgeUiLayoutLogic'))
 local Constants = require(Shared:WaitForChild('Constants'))
 local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
@@ -52,13 +53,60 @@ rebirthsLabel.Position = UDim2.fromOffset(16, 72)
 rebirthsLabel.Text = 'Rebirths: 0'
 rebirthsLabel.Parent = screenGui
 
-local nextUnlockLabel = scoreLabel:Clone()
+local agePanelLayout = AgeUiLayoutLogic.getAgeStatusPanelLayout()
+
+local ageStatusPanel = Instance.new('Frame')
+ageStatusPanel.Name = 'AgeStatusPanel'
+ageStatusPanel.Size = UDim2.fromOffset(agePanelLayout.width, agePanelLayout.height)
+ageStatusPanel.AnchorPoint = Vector2.new(0.5, 0)
+ageStatusPanel.Position = UDim2.new(0.5, 0, 0, agePanelLayout.topPadding)
+ageStatusPanel.BackgroundTransparency = 0.12
+ageStatusPanel.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
+ageStatusPanel.Parent = screenGui
+
+local ageStatusCorner = corner:Clone()
+ageStatusCorner.Parent = ageStatusPanel
+
+local ageStatusStroke = Instance.new('UIStroke')
+ageStatusStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+ageStatusStroke.Color = Color3.fromRGB(86, 106, 148)
+ageStatusStroke.Thickness = 1
+ageStatusStroke.Transparency = 0.25
+ageStatusStroke.Parent = ageStatusPanel
+
+local ageStatusPadding = Instance.new('UIPadding')
+ageStatusPadding.PaddingTop = UDim.new(0, 10)
+ageStatusPadding.PaddingBottom = UDim.new(0, 10)
+ageStatusPadding.PaddingLeft = UDim.new(0, 14)
+ageStatusPadding.PaddingRight = UDim.new(0, 14)
+ageStatusPadding.Parent = ageStatusPanel
+
+local ageStatusLayout = Instance.new('UIListLayout')
+ageStatusLayout.FillDirection = Enum.FillDirection.Vertical
+ageStatusLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+ageStatusLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+ageStatusLayout.Padding = UDim.new(0, 8)
+ageStatusLayout.Parent = ageStatusPanel
+
+local currentAgeLabel = Instance.new('TextLabel')
+currentAgeLabel.Name = 'CurrentAgeLabel'
+currentAgeLabel.Size = UDim2.new(1, 0, 0, 34)
+currentAgeLabel.BackgroundTransparency = 1
+currentAgeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+currentAgeLabel.TextXAlignment = Enum.TextXAlignment.Left
+currentAgeLabel.Font = Enum.Font.GothamBold
+currentAgeLabel.TextSize = 22
+currentAgeLabel.Text = 'Current Age: Age of Beads'
+currentAgeLabel.Parent = ageStatusPanel
+
+local nextUnlockLabel = currentAgeLabel:Clone()
 nextUnlockLabel.Name = 'NextUnlockLabel'
-nextUnlockLabel.Size = UDim2.fromOffset(460, 48)
-nextUnlockLabel.Position = UDim2.fromOffset(16, 128)
-nextUnlockLabel.TextSize = 18
-nextUnlockLabel.Text = 'Next: Age of Brass at 600 (600 to go)'
-nextUnlockLabel.Parent = screenGui
+nextUnlockLabel.Size = UDim2.new(1, 0, 0, 30)
+nextUnlockLabel.TextColor3 = Color3.fromRGB(204, 222, 255)
+nextUnlockLabel.Font = Enum.Font.Gotham
+nextUnlockLabel.TextSize = 17
+nextUnlockLabel.Text = 'Next Age: Age of Brass at 600 (600 to go)'
+nextUnlockLabel.Parent = ageStatusPanel
 
 local rankPanelLayout = RankUiLayoutLogic.getRankPanelLayout()
 
@@ -367,11 +415,13 @@ end
 local function setScoreAndRebirths(score: number, rebirths: number)
     scoreLabel.Text = string.format('Score: %s', NumberFormat.formatCompact(score))
     rebirthsLabel.Text = string.format('Rebirths: %s', NumberFormat.formatCompact(rebirths))
-    nextUnlockLabel.Text = ZoneUnlockUiLogic.buildNextUnlockText(
+    currentAgeLabel.Text = ZoneUnlockUiLogic.buildCurrentAgeText(score, Constants.AGE_ZONE_CONFIGS)
+    local nextUnlockText = ZoneUnlockUiLogic.buildNextUnlockText(
         score,
         Constants.AGE_ZONE_CONFIGS,
         NumberFormat.formatCompact
     )
+    nextUnlockLabel.Text = string.format('Next Age: %s', nextUnlockText:gsub('^Next:%s*', ''))
     updateAgeZoneLabelVisibility(score)
     updateRebirthZoneLabel(score, rebirths)
 

@@ -53,6 +53,24 @@ runCase('returns nil when all ages are unlocked', function()
     expectEqual(nextUnlock, nil, 'should return nil when no ages remain')
 end)
 
+runCase('returns highest unlocked age as current age', function()
+    local currentAge = ZoneUnlockUiLogic.getCurrentAge(600, ageZoneConfigs)
+    expectEqual(
+        currentAge and currentAge.displayName,
+        'Age of Brass',
+        'should pick latest age unlocked by score'
+    )
+end)
+
+runCase('formats current age text with unlocked age name', function()
+    local currentAgeText = ZoneUnlockUiLogic.buildCurrentAgeText(6600, ageZoneConfigs)
+    expectEqual(
+        currentAgeText,
+        'Current Age: Age of Relays',
+        'should show current age section text'
+    )
+end)
+
 runCase('formats next unlock text with required and remaining score', function()
     local unlockText =
         ZoneUnlockUiLogic.buildNextUnlockText(599, ageZoneConfigs, NumberFormat.formatCompact)

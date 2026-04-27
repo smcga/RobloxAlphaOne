@@ -22,6 +22,35 @@ function ZoneUnlockUiLogic.getNextUnlock(
     return nil
 end
 
+function ZoneUnlockUiLogic.getCurrentAge(
+    score: number,
+    ageZoneConfigs: { AgeZoneUnlockConfig }
+): AgeZoneUnlockConfig?
+    local currentAge: AgeZoneUnlockConfig? = nil
+
+    for _, zoneConfig in ipairs(ageZoneConfigs) do
+        if ZoneUnlockUiLogic.isZoneUnlocked(score, zoneConfig.requiredScore) then
+            currentAge = zoneConfig
+        else
+            break
+        end
+    end
+
+    return currentAge
+end
+
+function ZoneUnlockUiLogic.buildCurrentAgeText(
+    score: number,
+    ageZoneConfigs: { AgeZoneUnlockConfig }
+): string
+    local currentAge = ZoneUnlockUiLogic.getCurrentAge(score, ageZoneConfigs)
+    if currentAge then
+        return string.format('Current Age: %s', currentAge.displayName)
+    end
+
+    return 'Current Age: Unknown'
+end
+
 function ZoneUnlockUiLogic.buildNextUnlockText(
     score: number,
     ageZoneConfigs: { AgeZoneUnlockConfig },
