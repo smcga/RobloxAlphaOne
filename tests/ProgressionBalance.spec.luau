@@ -77,10 +77,11 @@ runCase('every transition matches target seconds for its age gain', function()
     end
 end)
 
-runCase('catch-up multiplier keeps early rebirths linear but damps late scaling', function()
-    local earlyMultiplier = ProgressionBalance.getCatchUpMultiplier(0, 0, 2, 30)
-    local lateMultiplier = ProgressionBalance.getCatchUpMultiplier(0, 0, 150, 30)
-
-    expectTrue(earlyMultiplier == 15, 'early rebirths should keep existing linear speed')
-    expectTrue(lateMultiplier == 30, 'late rebirth scaling should be capped')
+runCase('age gain ratios remain strictly increasing across progression', function()
+    for ageIndex = 2, #ageConfigs do
+        expectTrue(
+            ageConfigs[ageIndex].scoreIncrement > ageConfigs[ageIndex - 1].scoreIncrement,
+            string.format('age %d score gain should exceed prior age', ageIndex)
+        )
+    end
 end)

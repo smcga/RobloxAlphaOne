@@ -44,8 +44,6 @@ local function tick(state, overrides)
         isInsideRebirthZone = false,
         scoreIntervalSeconds = 1,
         rankConfigs = rankConfigs,
-        rebirthCatchUpPerRebirth = 7,
-        maxCatchUpMultiplier = 30,
         postRecordRebirthMultiplier = 1,
     }
 
@@ -69,7 +67,7 @@ runCase('standing in first age zone increments by one without rebirth boost', fu
     expectEqual(result.state.rebirths, 0, 'rebirths should start at zero')
 end)
 
-runCase('rebirth multiplier applies immediately after rebirth regardless of prior best', function()
+runCase('rebirth count does not alter base zone score gain', function()
     local result = tick(ZoneProgressionLogic.newState(0, 2, 500, 2, 2), {
         isInsideAgeZones = {
             true,
@@ -78,10 +76,10 @@ runCase('rebirth multiplier applies immediately after rebirth regardless of prio
         },
     })
 
-    expectEqual(result.state.score, 15, '2 rebirths should apply 15x rebirth multiplier')
+    expectEqual(result.state.score, 1, 'rebirth count should not change score gain pacing')
 end)
 
-runCase('bonus score multiplier stacks with rebirth multiplier', function()
+runCase('bonus score multiplier scales score gain', function()
     local result = tick(ZoneProgressionLogic.newState(0, 2, 500, 2, 2), {
         isInsideAgeZones = {
             true,
@@ -91,7 +89,7 @@ runCase('bonus score multiplier stacks with rebirth multiplier', function()
         bonusScoreMultiplier = 10,
     })
 
-    expectEqual(result.state.score, 150, '10x boost should stack with rebirth multiplier')
+    expectEqual(result.state.score, 10, '10x boost should scale base score gain')
 end)
 
 runCase('entering rebirth zone resets score and increments rebirths by exactly one', function()
@@ -120,7 +118,7 @@ runCase('staying in rebirth zone does not repeatedly grant rebirths', function()
     expectEqual(second.state.rebirths, 4, 'rebirth grants should only happen on zone entry')
 end)
 
-runCase('rebirth multiplier continues scaling with higher rebirth counts', function()
+runCase('higher rebirth counts keep the same base score pacing', function()
     local result = tick(ZoneProgressionLogic.newState(0, 10, 100, 1, 1), {
         isInsideAgeZones = {
             true,
@@ -129,10 +127,10 @@ runCase('rebirth multiplier continues scaling with higher rebirth counts', funct
         },
     })
 
-    expectEqual(result.state.score, 30, '10 rebirths should be capped to avoid late-age skips')
+    expectEqual(result.state.score, 1, 'rebirth count should not scale score gain')
 end)
 
-runCase('rebirth multiplier still applies at or above highest score achieved', function()
+runCase('base score pacing is stable at or above highest score achieved', function()
     local result = tick(ZoneProgressionLogic.newState(100, 4, 100, 2, 2), {
         isInsideAgeZones = {
             true,
@@ -141,7 +139,7 @@ runCase('rebirth multiplier still applies at or above highest score achieved', f
         },
     })
 
-    expectEqual(result.state.score, 129, 'rebirth multiplier should apply even at record score')
+    expectEqual(result.state.score, 101, 'scoring should remain predictable around record score')
 end)
 
 runCase('highest rank and age are preserved and updated on score growth', function()
@@ -258,8 +256,8 @@ runCase(
         )
         expectEqual(
             afterFirstZoneTick.state.score,
-            30,
-            'next zone tick should restart from zero and apply capped catch-up multiplier'
+            1,
+            'next zone tick should restart from zero with base score pacing'
         )
     end
 )

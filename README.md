@@ -147,9 +147,9 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - The rank title above each player's head updates automatically as score crosses rank thresholds.
    - Your avatar aura transforms every rank with unique colors, stronger particles/light pulses, and increased size at higher ranks.
    - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
-   - Rebirth increases your score gain multiplier in every age zone when you resume scoring, including after you pass your previous best score, and each additional rebirth adds another fixed increment.
+   - Rebirthing resets score to zero and preserves your progression milestones, but age-zone score gain remains predictable (driven by age base gain plus rank/chest multipliers, not rebirth count).
    - Age zones unlock in sequence as your score passes each requirement threshold.
-   - Entering the `Rebirth` zone shows the current fixed rebirth score cost (`1,000`), keeps early rebirth payouts near `+1` per `1,000` score, applies diminishing returns on extreme score dumps, resets score to `0` only when the cost is met, and resumes zone-based ticking from zero (with rebirth/rank/bonus multipliers) while preserving highest achieved score/rank/age milestones.
+   - Entering the `Rebirth` zone shows the current fixed rebirth score cost (`1,000`), keeps early rebirth payouts near `+1` per `1,000` score, applies diminishing returns on extreme score dumps, resets score to `0` only when the cost is met, and resumes zone-based ticking from zero (with rank/bonus multipliers) while preserving highest achieved score/rank/age milestones.
    - A giant floating screen above the rebirth area shows the current all-time top scorer name and best-ever score across all players.
    - Entering a still-locked age zone flings you away, then kills you, while preserving your existing score/rebirth totals.
    - Locked-zone deaths play a shared SFX for everyone and spawn flying `Nope!` text particles around the punished player.

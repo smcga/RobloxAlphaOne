@@ -17,10 +17,6 @@ ProgressionBalance.TOTAL_AGES = 12
 ProgressionBalance.RANKS_PER_AGE = 8
 ProgressionBalance.MAX_COMPACT_SCORE_TARGET = 9.99e65
 ProgressionBalance.BASE_AGE_SCORE_PER_SECOND = 1
-ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH = 7
-ProgressionBalance.MAX_CATCH_UP_MULTIPLIER = 30
-ProgressionBalance.REBIRTH_LINEAR_SCALING_REBIRTHS = 5
-ProgressionBalance.REBIRTH_DIMINISHING_RETURNS_POWER = 0.55
 ProgressionBalance.POST_RECORD_REBIRTH_MULTIPLIER = 1
 
 local AGE_GAIN_RATIO = 449623.4583190185
@@ -132,29 +128,6 @@ function ProgressionBalance.getHighestUnlockedAgeIndex(
     end
 
     return ageIndex
-end
-
-function ProgressionBalance.getCatchUpMultiplier(
-    _currentScore: number,
-    _highestScoreAchieved: number,
-    rebirths: number,
-    maxCatchUpMultiplier: number?
-): number
-    local rebirthCount = math.max(rebirths, 0)
-    local linearRebirths = ProgressionBalance.REBIRTH_LINEAR_SCALING_REBIRTHS
-    local diminishingPower = ProgressionBalance.REBIRTH_DIMINISHING_RETURNS_POWER
-
-    local effectiveRebirths = rebirthCount
-    if rebirthCount > linearRebirths then
-        effectiveRebirths = linearRebirths + ((rebirthCount - linearRebirths) ^ diminishingPower)
-    end
-
-    local multiplier = 1 + effectiveRebirths * ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH
-    if maxCatchUpMultiplier ~= nil then
-        multiplier = math.min(multiplier, math.max(maxCatchUpMultiplier, 1))
-    end
-
-    return multiplier
 end
 
 function ProgressionBalance.build(rankNames: { string }): ({ RankConfig }, { AgeBalanceConfig })
