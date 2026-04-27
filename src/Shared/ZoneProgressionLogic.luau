@@ -24,9 +24,10 @@ export type ZoneProgressionInput = {
     scoreIntervalSeconds: number,
     isInsideRebirthZone: boolean,
     rankConfigs: { ProgressionBalance.RankConfig },
-    rebirthCatchUpPerRebirth: number?,
-    maxCatchUpMultiplier: number?,
     postRecordRebirthMultiplier: number?,
+    rebirthMultiplierScale: number?,
+    rebirthMultiplierPower: number?,
+    maxRebirthScoreMultiplier: number?,
     bonusScoreMultiplier: number?,
     rankScoreMultiplier: number?,
     rebirthConfig: RebirthLogic.RebirthConfig?,
@@ -65,25 +66,16 @@ function ZoneProgressionLogic.tick(
     state: ZoneProgressionState,
     input: ZoneProgressionInput
 ): ZoneProgressionResult
-    local catchUpPerRebirth = input.rebirthCatchUpPerRebirth
-        or ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH
     local postRecordRebirthMultiplier = input.postRecordRebirthMultiplier
         or ProgressionBalance.POST_RECORD_REBIRTH_MULTIPLIER
-
-    local catchUpMultiplier = ProgressionBalance.getCatchUpMultiplier(
-        state.score,
-        state.highestScoreAchieved,
+    local rebirthMultiplier = ProgressionBalance.getRebirthScoreMultiplier(
         state.rebirths,
-        input.maxCatchUpMultiplier
+        input.rebirthMultiplierScale,
+        input.rebirthMultiplierPower,
+        input.maxRebirthScoreMultiplier
     )
-    if catchUpPerRebirth ~= ProgressionBalance.REBIRTH_CATCH_UP_PER_REBIRTH then
-        catchUpMultiplier = math.max(1, 1 + state.rebirths * catchUpPerRebirth)
-        if input.maxCatchUpMultiplier ~= nil then
-            catchUpMultiplier = math.min(catchUpMultiplier, math.max(input.maxCatchUpMultiplier, 1))
-        end
-    end
 
-    local scoreMultiplier = catchUpMultiplier
+    local scoreMultiplier = rebirthMultiplier
         * (input.bonusScoreMultiplier or 1)
         * (input.rankScoreMultiplier or 1)
         * postRecordRebirthMultiplier

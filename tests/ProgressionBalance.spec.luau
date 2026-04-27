@@ -77,10 +77,27 @@ runCase('every transition matches target seconds for its age gain', function()
     end
 end)
 
-runCase('catch-up multiplier keeps early rebirths linear but damps late scaling', function()
-    local earlyMultiplier = ProgressionBalance.getCatchUpMultiplier(0, 0, 2, 30)
-    local lateMultiplier = ProgressionBalance.getCatchUpMultiplier(0, 0, 150, 30)
+runCase('age gain ratios remain strictly increasing across progression', function()
+    for ageIndex = 2, #ageConfigs do
+        expectTrue(
+            ageConfigs[ageIndex].scoreIncrement > ageConfigs[ageIndex - 1].scoreIncrement,
+            string.format('age %d score gain should exceed prior age', ageIndex)
+        )
+    end
+end)
 
-    expectTrue(earlyMultiplier == 15, 'early rebirths should keep existing linear speed')
-    expectTrue(lateMultiplier == 30, 'late rebirth scaling should be capped')
+runCase('rebirth multiplier uses diminishing returns and stays monotonic', function()
+    local zero = ProgressionBalance.getRebirthScoreMultiplier(0)
+    local four = ProgressionBalance.getRebirthScoreMultiplier(4)
+    local oneHundred = ProgressionBalance.getRebirthScoreMultiplier(100)
+
+    expectTrue(zero == 1, 'zero rebirths should keep 1x multiplier')
+    expectTrue(four > zero, 'rebirth multiplier should increase with rebirths')
+    expectTrue(oneHundred > four, 'multiplier should remain monotonic at high rebirths')
+    expectTrue(oneHundred < 5, 'diminishing scaling should avoid runaway at 100 rebirths')
+end)
+
+runCase('rebirth multiplier respects configured cap', function()
+    local capped = ProgressionBalance.getRebirthScoreMultiplier(50_000, nil, nil, 12)
+    expectTrue(capped == 12, 'multiplier should clamp to configured cap')
 end)

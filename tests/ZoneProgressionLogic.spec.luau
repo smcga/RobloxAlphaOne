@@ -8,6 +8,14 @@ local function expectEqual(actual: number, expected: number, message: string)
     end
 end
 
+local function expectApprox(actual: number, expected: number, tolerance: number, message: string)
+    if math.abs(actual - expected) > tolerance then
+        error(
+            string.format('%s (expected %s, got %s)', message, tostring(expected), tostring(actual))
+        )
+    end
+end
+
 local function runCase(name: string, fn: () -> ())
     fn()
     print(string.format('[PASS] %s', name))
@@ -44,8 +52,6 @@ local function tick(state, overrides)
         isInsideRebirthZone = false,
         scoreIntervalSeconds = 1,
         rankConfigs = rankConfigs,
-        rebirthCatchUpPerRebirth = 7,
-        maxCatchUpMultiplier = 30,
         postRecordRebirthMultiplier = 1,
     }
 
@@ -69,7 +75,7 @@ runCase('standing in first age zone increments by one without rebirth boost', fu
     expectEqual(result.state.rebirths, 0, 'rebirths should start at zero')
 end)
 
-runCase('rebirth multiplier applies immediately after rebirth regardless of prior best', function()
+runCase('rebirth count increases score gain with diminishing multiplier', function()
     local result = tick(ZoneProgressionLogic.newState(0, 2, 500, 2, 2), {
         isInsideAgeZones = {
             true,
@@ -78,10 +84,10 @@ runCase('rebirth multiplier applies immediately after rebirth regardless of prio
         },
     })
 
-    expectEqual(result.state.score, 15, '2 rebirths should apply 15x rebirth multiplier')
+    expectApprox(result.state.score, 1.4949747468, 1e-9, '2 rebirths should apply sqrt multiplier')
 end)
 
-runCase('bonus score multiplier stacks with rebirth multiplier', function()
+runCase('bonus score multiplier scales score gain', function()
     local result = tick(ZoneProgressionLogic.newState(0, 2, 500, 2, 2), {
         isInsideAgeZones = {
             true,
@@ -91,7 +97,12 @@ runCase('bonus score multiplier stacks with rebirth multiplier', function()
         bonusScoreMultiplier = 10,
     })
 
-    expectEqual(result.state.score, 150, '10x boost should stack with rebirth multiplier')
+    expectApprox(
+        result.state.score,
+        14.9497474683,
+        1e-9,
+        '10x boost should stack with rebirth multiplier'
+    )
 end)
 
 runCase('entering rebirth zone resets score and increments rebirths by exactly one', function()
@@ -120,7 +131,7 @@ runCase('staying in rebirth zone does not repeatedly grant rebirths', function()
     expectEqual(second.state.rebirths, 4, 'rebirth grants should only happen on zone entry')
 end)
 
-runCase('rebirth multiplier continues scaling with higher rebirth counts', function()
+runCase('higher rebirth counts keep predictable soft-scaling pace', function()
     local result = tick(ZoneProgressionLogic.newState(0, 10, 100, 1, 1), {
         isInsideAgeZones = {
             true,
@@ -129,7 +140,12 @@ runCase('rebirth multiplier continues scaling with higher rebirth counts', funct
         },
     })
 
-    expectEqual(result.state.score, 30, '10 rebirths should be capped to avoid late-age skips')
+    expectApprox(
+        result.state.score,
+        2.1067971811,
+        1e-9,
+        'rebirth scaling should follow diminishing sqrt growth'
+    )
 end)
 
 runCase('rebirth multiplier still applies at or above highest score achieved', function()
@@ -141,7 +157,12 @@ runCase('rebirth multiplier still applies at or above highest score achieved', f
         },
     })
 
-    expectEqual(result.state.score, 129, 'rebirth multiplier should apply even at record score')
+    expectApprox(
+        result.state.score,
+        101.7,
+        1e-9,
+        'rebirth multiplier should apply even when matching prior record'
+    )
 end)
 
 runCase('highest rank and age are preserved and updated on score growth', function()
@@ -258,8 +279,8 @@ runCase(
         )
         expectEqual(
             afterFirstZoneTick.state.score,
-            30,
-            'next zone tick should restart from zero and apply capped catch-up multiplier'
+            12,
+            'next zone tick should restart from zero and use capped rebirth multiplier'
         )
     end
 )
