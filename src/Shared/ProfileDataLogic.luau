@@ -1,4 +1,5 @@
 local ProgressionBalance = require('./ProgressionBalance')
+local RankCelebrationLogic = require('./RankCelebrationLogic')
 
 export type ProfileData = {
     score: number,
@@ -13,6 +14,8 @@ export type ProfileData = {
     unlockedVehicleMounts: { string },
     equippedHatId: string?,
     equippedVehicleMountId: string?,
+    rankReachCounts: { number },
+    globallyCountedRankIndices: { number },
 }
 
 local ProfileDataLogic = {}
@@ -87,6 +90,11 @@ function ProfileDataLogic.normalize(rawData: any): ProfileData
             unlockedVehicleMounts = {},
             equippedHatId = nil,
             equippedVehicleMountId = nil,
+            rankReachCounts = RankCelebrationLogic.sanitizeRankReachCounts(
+                nil,
+                ProgressionBalance.TOTAL_RANKS
+            ),
+            globallyCountedRankIndices = {},
         }
     end
 
@@ -117,6 +125,14 @@ function ProfileDataLogic.normalize(rawData: any): ProfileData
         equippedVehicleMountId = sanitizeOptionalOwnedId(
             rawData.equippedVehicleMountId,
             unlockedVehicleMounts
+        ),
+        rankReachCounts = RankCelebrationLogic.sanitizeRankReachCounts(
+            rawData.rankReachCounts,
+            ProgressionBalance.TOTAL_RANKS
+        ),
+        globallyCountedRankIndices = RankCelebrationLogic.sanitizeRankIndexArray(
+            rawData.globallyCountedRankIndices,
+            ProgressionBalance.TOTAL_RANKS
         ),
     }
 end
@@ -152,6 +168,57 @@ function ProfileDataLogic.toStoredValue(profileData: ProfileData): { [string]: a
         equippedVehicleMountId = sanitizeOptionalOwnedId(
             profileData.equippedVehicleMountId,
             unlockedVehicleMounts
+        ),
+        rankReachCounts = RankCelebrationLogic.sanitizeRankReachCounts(
+            profileData.rankReachCounts,
+            ProgressionBalance.TOTAL_RANKS
+        ),
+        globallyCountedRankIndices = RankCelebrationLogic.sanitizeRankIndexArray(
+            profileData.globallyCountedRankIndices,
+            ProgressionBalance.TOTAL_RANKS
+        ),
+    }
+end
+
+function ProfileDataLogic.mergeLuckyChestProfileData(
+    profileData: ProfileData,
+    luckyChestProfileData: {
+        nextLuckyChestOpenAt: number,
+        scoreBoostExpiresAt: number,
+        unlockedHats: { string },
+        unlockedPets: { string },
+        unlockedVehicleMounts: { string },
+        equippedHatId: string?,
+        equippedVehicleMountId: string?,
+    }
+): ProfileData
+    local unlockedHats = sanitizeStringArray(luckyChestProfileData.unlockedHats)
+    local unlockedPets = sanitizeStringArray(luckyChestProfileData.unlockedPets)
+    local unlockedVehicleMounts = sanitizeStringArray(luckyChestProfileData.unlockedVehicleMounts)
+
+    return {
+        score = profileData.score,
+        rebirths = profileData.rebirths,
+        highestScoreAchieved = profileData.highestScoreAchieved,
+        highestRankAchieved = profileData.highestRankAchieved,
+        highestAgeAchieved = profileData.highestAgeAchieved,
+        nextLuckyChestOpenAt = luckyChestProfileData.nextLuckyChestOpenAt,
+        scoreBoostExpiresAt = luckyChestProfileData.scoreBoostExpiresAt,
+        unlockedHats = unlockedHats,
+        unlockedPets = unlockedPets,
+        unlockedVehicleMounts = unlockedVehicleMounts,
+        equippedHatId = sanitizeOptionalOwnedId(luckyChestProfileData.equippedHatId, unlockedHats),
+        equippedVehicleMountId = sanitizeOptionalOwnedId(
+            luckyChestProfileData.equippedVehicleMountId,
+            unlockedVehicleMounts
+        ),
+        rankReachCounts = RankCelebrationLogic.sanitizeRankReachCounts(
+            profileData.rankReachCounts,
+            ProgressionBalance.TOTAL_RANKS
+        ),
+        globallyCountedRankIndices = RankCelebrationLogic.sanitizeRankIndexArray(
+            profileData.globallyCountedRankIndices,
+            ProgressionBalance.TOTAL_RANKS
         ),
     }
 end

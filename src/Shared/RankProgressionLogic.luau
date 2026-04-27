@@ -1,14 +1,17 @@
 export type RankConfig = {
     name: string,
     requiredScore: number,
+    description: string?,
 }
 
 export type RankProgress = {
     currentRankIndex: number,
     currentRankName: string,
+    currentRankDescription: string?,
     currentRankRequiredScore: number,
     nextRankIndex: number?,
     nextRankName: string?,
+    nextRankDescription: string?,
     nextRankRequiredScore: number?,
     scoreIntoCurrentRank: number,
     scoreNeededForNextRank: number,
@@ -68,9 +71,11 @@ function RankProgressionLogic.getRankProgress(
         return {
             currentRankIndex = currentRankIndex,
             currentRankName = currentRank.name,
+            currentRankDescription = currentRank.description,
             currentRankRequiredScore = currentRank.requiredScore,
             nextRankIndex = currentRankIndex + 1,
             nextRankName = nextRank.name,
+            nextRankDescription = nextRank.description,
             nextRankRequiredScore = nextRank.requiredScore,
             scoreIntoCurrentRank = clampedScoreIntoCurrentRank,
             scoreNeededForNextRank = math.max(nextRank.requiredScore - sanitizedScore, 0),
@@ -81,9 +86,11 @@ function RankProgressionLogic.getRankProgress(
     return {
         currentRankIndex = currentRankIndex,
         currentRankName = currentRank.name,
+        currentRankDescription = currentRank.description,
         currentRankRequiredScore = currentRank.requiredScore,
         nextRankIndex = nil,
         nextRankName = nil,
+        nextRankDescription = nil,
         nextRankRequiredScore = nil,
         scoreIntoCurrentRank = 0,
         scoreNeededForNextRank = 0,
