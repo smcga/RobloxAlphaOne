@@ -11,6 +11,7 @@ local Constants = require(Shared:WaitForChild('Constants'))
 local NumberFormat = require(Shared:WaitForChild('NumberFormat'))
 local RankProgressionLogic = require(Shared:WaitForChild('RankProgressionLogic'))
 local RebirthLogic = require(Shared:WaitForChild('RebirthLogic'))
+local RankUiLayoutLogic = require(Shared:WaitForChild('RankUiLayoutLogic'))
 local Remotes = require(Shared:WaitForChild('Remotes'))
 local ScorePopupLogic = require(Shared:WaitForChild('ScorePopupLogic'))
 local ZoneUnlockUiLogic = require(Shared:WaitForChild('ZoneUnlockUiLogic'))
@@ -59,12 +60,15 @@ nextUnlockLabel.TextSize = 18
 nextUnlockLabel.Text = 'Next: Age of Brass at 600 (600 to go)'
 nextUnlockLabel.Parent = screenGui
 
+local rankPanelLayout = RankUiLayoutLogic.getRankPanelLayout()
+
 local rankPanel = Instance.new('Frame')
 rankPanel.Name = 'RankPanel'
-rankPanel.Size = UDim2.fromOffset(460, 88)
-rankPanel.Position = UDim2.fromOffset(16, 184)
-rankPanel.BackgroundTransparency = 0.3
-rankPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+rankPanel.Size = UDim2.fromOffset(rankPanelLayout.width, rankPanelLayout.height)
+rankPanel.AnchorPoint = Vector2.new(0.5, 1)
+rankPanel.Position = UDim2.new(0.5, 0, 1, -rankPanelLayout.bottomPadding)
+rankPanel.BackgroundTransparency = 0.22
+rankPanel.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
 rankPanel.Parent = screenGui
 
 local rankPanelCorner = corner:Clone()
