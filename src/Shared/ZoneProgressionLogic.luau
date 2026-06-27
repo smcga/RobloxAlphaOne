@@ -10,6 +10,8 @@ export type ZoneProgressionState = {
     highestAgeAchieved: number,
     ageAccumulatorSeconds: { [number]: number },
     wasInsideRebirthZone: boolean,
+    activeComboAgeZoneIndex: number?,
+    scoreComboTicks: number,
 }
 
 export type AgeZoneProgressionConfig = {
@@ -33,6 +35,8 @@ export type ZoneProgressionInput = {
     rebirthConfig: RebirthLogic.RebirthConfig?,
     nowUnixTime: number?,
     isInsideFinalAgeZone: boolean?,
+    zoneComboStep: number?,
+    maxZoneComboMultiplier: number?,
 }
 
 export type ZoneProgressionResult = {
@@ -59,6 +63,8 @@ function ZoneProgressionLogic.newState(
         highestAgeAchieved = initialHighestAgeAchieved or 1,
         ageAccumulatorSeconds = {},
         wasInsideRebirthZone = false,
+        activeComboAgeZoneIndex = nil,
+        scoreComboTicks = 0,
     }
 end
 
@@ -83,25 +89,65 @@ function ZoneProgressionLogic.tick(
     local score = state.score
     local ageAccumulatorSeconds = {}
     local zoneCount = #input.ageZoneConfigs
+    local comboStep = input.zoneComboStep or 0
+    local maxComboMultiplier = input.maxZoneComboMultiplier or 1
+    local activeComboAgeZoneIndex = nil
+
+    for index = 1, zoneCount do
+        local zoneConfig = input.ageZoneConfigs[index]
+        local isInsideZone = input.isInsideAgeZones[index] == true
+        local canUseZone = score >= zoneConfig.requiredScore
+
+        if isInsideZone and canUseZone and activeComboAgeZoneIndex == nil then
+            activeComboAgeZoneIndex = index
+        end
+    end
+
+    local scoreComboTicks = state.scoreComboTicks
+    if activeComboAgeZoneIndex ~= state.activeComboAgeZoneIndex then
+        scoreComboTicks = 0
+    end
 
     for index = 1, zoneCount do
         local zoneConfig = input.ageZoneConfigs[index]
         local zoneAccumulator = state.ageAccumulatorSeconds[index] or 0
-        local isInsideZone = input.isInsideAgeZones[index] == true
-        local canUseZone = score >= zoneConfig.requiredScore
+        local isComboZone = index == activeComboAgeZoneIndex
 
-        local zoneTickState = ScoreLogic.tick(
-            {
-                score = score,
-                accumulatorSeconds = zoneAccumulator,
-            },
-            input.deltaSeconds,
-            isInsideZone and canUseZone,
-            input.scoreIntervalSeconds,
-            zoneConfig.scoreIncrement * scoreMultiplier
-        )
-        score = zoneTickState.score
-        ageAccumulatorSeconds[index] = zoneTickState.accumulatorSeconds
+        if isComboZone and comboStep > 0 and maxComboMultiplier > 1 then
+            local zoneTickState = ScoreLogic.tickWithCombo(
+                {
+                    score = score,
+                    accumulatorSeconds = zoneAccumulator,
+                    comboTicks = scoreComboTicks,
+                },
+                input.deltaSeconds,
+                true,
+                input.scoreIntervalSeconds,
+                zoneConfig.scoreIncrement * scoreMultiplier,
+                comboStep,
+                maxComboMultiplier
+            )
+            score = zoneTickState.score
+            ageAccumulatorSeconds[index] = zoneTickState.accumulatorSeconds
+            scoreComboTicks = zoneTickState.comboTicks
+        else
+            local zoneTickState = ScoreLogic.tick(
+                {
+                    score = score,
+                    accumulatorSeconds = zoneAccumulator,
+                },
+                input.deltaSeconds,
+                isComboZone,
+                input.scoreIntervalSeconds,
+                zoneConfig.scoreIncrement * scoreMultiplier
+            )
+            score = zoneTickState.score
+            ageAccumulatorSeconds[index] = zoneTickState.accumulatorSeconds
+        end
+    end
+
+    if activeComboAgeZoneIndex == nil then
+        scoreComboTicks = 0
     end
 
     local enteredRebirthZone = input.isInsideRebirthZone and not state.wasInsideRebirthZone
@@ -121,11 +167,15 @@ function ZoneProgressionLogic.tick(
                 rebirths += rebirthGrant
                 score = 0
                 ageAccumulatorSeconds = {}
+                activeComboAgeZoneIndex = nil
+                scoreComboTicks = 0
             end
         else
             rebirths += 1
             score = 0
             ageAccumulatorSeconds = {}
+            activeComboAgeZoneIndex = nil
+            scoreComboTicks = 0
         end
     end
 
@@ -148,6 +198,8 @@ function ZoneProgressionLogic.tick(
             highestAgeAchieved = highestAgeAchieved,
             ageAccumulatorSeconds = ageAccumulatorSeconds,
             wasInsideRebirthZone = input.isInsideRebirthZone,
+            activeComboAgeZoneIndex = activeComboAgeZoneIndex,
+            scoreComboTicks = scoreComboTicks,
         },
     }
 end
