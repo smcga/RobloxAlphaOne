@@ -297,3 +297,39 @@ runCase('rank multiplier contributes to score gain', function()
 
     expectEqual(result.state.score, 1.2, 'rank multiplier should scale zone score increment')
 end)
+
+runCase('zone combo rewards staying in one unlocked age zone', function()
+    local result = tick(ZoneProgressionLogic.newState(0), {
+        deltaSeconds = 3,
+        isInsideAgeZones = { true, false, false },
+        zoneComboStep = 0.05,
+        maxZoneComboMultiplier = 2,
+    })
+
+    expectEqual(result.state.score, 3.15, 'three zone ticks should include a small combo bonus')
+    expectEqual(result.state.scoreComboTicks, 3, 'combo ticks should track scored intervals')
+    expectEqual(result.state.activeComboAgeZoneIndex, 1, 'active combo zone should be remembered')
+end)
+
+runCase('zone combo resets after switching age zones', function()
+    local first = tick(ZoneProgressionLogic.newState(500), {
+        deltaSeconds = 2,
+        isInsideAgeZones = { true, false, false },
+        zoneComboStep = 0.05,
+        maxZoneComboMultiplier = 2,
+    })
+    local second = tick(first.state, {
+        deltaSeconds = 1,
+        isInsideAgeZones = { false, true, false },
+        zoneComboStep = 0.05,
+        maxZoneComboMultiplier = 2,
+    })
+
+    expectEqual(
+        second.state.score,
+        552.05,
+        'switching zones should restart combo before high-zone increment'
+    )
+    expectEqual(second.state.scoreComboTicks, 1, 'new zone should start a fresh combo')
+    expectEqual(second.state.activeComboAgeZoneIndex, 2, 'combo should move to the new zone')
+end)

@@ -21,7 +21,7 @@ A compact Roblox MVP using a filesystem-first workflow (Rojo + Wally + mise-en-p
 - Adds a server-authoritative Rewards inventory panel where players can view unlocked hats/mounts, equip one hat, equip one vehicle mount, and unequip either slot.
 - Equips Lucky Chest hats by loading Creator Store assets server-side (with script descendants removed) and attaching safe visuals to the avatar; current temporary forced hat asset is `Classic Cowboy hat` (`17075928250`) for all hat rewards.
 - Equips Lucky Chest vehicle mounts as sanitized server-spawned visual models welded to the player, with a modest server-controlled movement speed boost while mounted; current temporary forced mount asset is `Drift Car mobile` (`15244136642`) for all mount rewards.
-- Increments score while inside age zones, with each age granting a higher score-per-second multiplier and rank multiplier layering on top.
+- Increments score while inside age zones, with each age granting a higher score-per-second multiplier, rank multiplier layering on top, and a stay-in-zone combo that ramps score gains up to 2x while players hold an unlocked zone.
 - Unlock requirements and score gains scale so each age takes roughly the same active time to complete while totals grow exponentially.
 - Increments score while inside age zones, with generated non-linear rank/age requirements and per-age score-per-second values derived from a shared progression curve.
 - A fresh no-rebirth run targets rank transition times of `30s, 40s, 50s, ...` while players stay in their highest unlocked age zone.
@@ -146,7 +146,7 @@ and writes the generated module source directly into `ReplicatedStorage.Shared.W
    - Whenever score increases, you see a brief floating popup with the compact increase amount (example: `+1.6k`) at a random position.
    - The rank title above each player's head updates automatically as score crosses rank thresholds.
    - Your avatar aura transforms every rank with unique colors, stronger particles/light pulses, and increased size at higher ranks.
-   - Standing inside the unlocked age zone increases score each second (later ages grant much larger values).
+   - Standing inside the unlocked age zone increases score each second (later ages grant much larger values), and staying in the same unlocked zone builds a small combo bonus up to 2x until you leave, switch zones, or rebirth.
    - Rebirthing resets score to zero and preserves progression milestones; score gain then uses a predictable diminishing rebirth multiplier (`1 + 0.35 * sqrt(rebirths)`, capped) layered with rank/chest multipliers.
    - Age zones unlock in sequence as your score passes each requirement threshold.
    - Entering the `Rebirth` zone shows the current fixed rebirth score cost (`1,000`), keeps early rebirth payouts near `+1` per `1,000` score, applies diminishing returns on extreme score dumps, resets score to `0` only when the cost is met, and resumes zone-based ticking from zero with multiplicative stacking (rebirth + rank + temporary boosts) while preserving highest achieved score/rank/age milestones.

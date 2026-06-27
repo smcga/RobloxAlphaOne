@@ -1570,6 +1570,8 @@ RunService.Heartbeat:Connect(function(deltaSeconds: number)
             rebirthConfig = REBIRTH_CONFIG,
             nowUnixTime = os.time(),
             isInsideFinalAgeZone = isInsideAgeZones[#Constants.AGE_ZONE_CONFIGS] == true,
+            zoneComboStep = Constants.ZONE_COMBO_MULTIPLIER_STEP,
+            maxZoneComboMultiplier = Constants.MAX_ZONE_COMBO_MULTIPLIER,
         })
 
         local previousState = state.progressionState
